@@ -2,7 +2,7 @@
 version: 3
 name: generic-message-bus
 display_name: "Generic Message Bus"
-status: draft
+status: in-progress
 created: 2026-06-03
 depends_on: [a2a-coordination-backbone, agent-presence-and-discovery]
 tags: [messaging, pub-sub, routing, generalization]

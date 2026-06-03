@@ -28,11 +28,13 @@ Active agents:
   grostak-api:patient-schema  (grostak-v2, joined 23m ago)
     Task: Designing patient clinical data schema
     Capabilities: schema-analysis, patient-api, migrations
+    Subscriptions: schema-changes
 
 Stale agents (past TTL — may be abandoned):
   stak-app:refill-flow  (stak-app, last seen 6h ago)
     Task: Wiring refill request UI
     Capabilities: mobile-hooks, patient-api
+    Subscriptions: (none)
 
 Recently inactive:
   agent-backbone:cr-workflow  (agent-backbone, left 2h ago)
@@ -79,6 +81,7 @@ ttl_hours: 4
 capabilities:
   - {inferred-capability-1}
   - {inferred-capability-2}
+subscriptions: []
 ---
 
 # Current Task
@@ -119,7 +122,8 @@ Registered: {agent_name}
 Presence record: ../agent-backbone/presence/presence-{agent_name}.md
 
 Run /backbone-leave before ending this session to persist what you learned.
-Run /cr-inbox to see change requests addressed to you.
+Run /backbone-inbox to see messages addressed to you.
+Run /backbone-subscribe <topic> to receive topic broadcasts.
 ```
 
 ## Notes

@@ -1,90 +1,101 @@
-# Change Request (CR) Message Store
+# Message Store
 
-This directory is the shared message bus for any agents registered on the backbone. CR files are written by Claude agents and read by Claude agents — no manual copy-paste required.
+This directory is the active message bus for the agent backbone. Messages are written here by `/backbone-publish` and claimed by `/backbone-inbox`. Completed messages are moved to `messages/archive/` by `/backbone-complete` — they never accumulate here.
 
 ---
 
 ## File Naming Convention
 
 ```
-cr-{id}-{status}.md
+{type}-{id}-{status}.md
 ```
 
+- `{type}` — registered type slug: `cr`, `task`, or any type defined in `messages/types/`
 - `{id}` — timestamp slug: `YYYYMMDD-HHMMSS` (collision-free, sortable)
-- `{status}` — one of: `draft` | `in-progress` | `awaiting-response` | `complete`
+- `{status}` — one of: `pending` | `claimed` | `complete`
 
 Status is encoded in the filename so `ls messages/` is immediately informative and renames are atomic.
 
 **Examples:**
 
 ```
-cr-20260603-143022-draft.md
-cr-20260603-143022-in-progress.md
-cr-20260603-143022-awaiting-response.md
-cr-20260603-143022-complete.md
+cr-20260603-143022-pending.md
+cr-20260603-143022-claimed.md
+task-20260604-091500-pending.md
+task-20260604-091500-claimed.md
 ```
+
+Completed files live in `messages/archive/` — not here.
 
 ---
 
-## Frontmatter Schema
+## Base Frontmatter Schema
+
+All messages carry these fields regardless of type:
 
 ```yaml
 ---
 id: YYYYMMDD-HHMMSS
-status: draft | in-progress | awaiting-response | complete
+type: cr | task | {registered-type}
+status: pending | claimed | complete
+routing: direct | topic
+from: agent-name          # registered name of the sending agent
+to: agent-name            # routing: direct — target agent name, or "any"
+topic: topic-name         # routing: topic — topic slug subscribers watch
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-from: agent-name          # registered name of the sending agent
-to: agent-name | any      # registered name of the target agent, or "any"
-title: Short human-readable title
-affected_endpoints:
-  - METHOD /path/to/endpoint
-affected_tables:
-  - table_name
 ---
 ```
 
-`from` and `to` use agent names registered via `/backbone-join`. Run `/backbone-roster` to see registered agents before sending. Use `to: any` for broadcast CRs that any available agent can claim.
+Individual types may add extra frontmatter fields — see `messages/types/{type}.md` for each type's full schema.
 
 ---
 
-## Prose Sections
+## Message Types
 
-Every CR file has four sections. The first two are filled in by the sending agent. The last two are filled in during implementation.
+Schemas for all registered types live in `messages/types/`. Adding a new type requires only a schema file there — no command changes needed.
 
-| Section | Filled by | When |
-|---------|-----------|------|
-| **Problem Statement** | sending agent | On `/cr-send` |
-| **Solution Recommendation** | sending agent | On `/cr-send` |
-| **Implementation Notes** | receiving agent | On `/cr-ready` |
-| **Follow-up Notes** | sending agent | On `/cr-done` |
+| Type | Schema | Purpose |
+|------|--------|---------|
+| `cr` | [types/cr.md](types/cr.md) | Change request — ask another agent to make a code/schema change |
+| `task` | [types/task.md](types/task.md) | Task assignment — delegate a discrete unit of work |
 
 ---
 
-## Status Lifecycle
+## State Machine
+
+All message types share the same lifecycle:
 
 ```
-draft
-  └─► in-progress        (receiving agent claims via /cr-inbox)
-        └─► awaiting-response   (/cr-ready — receiving agent signals done)
-              └─► complete       (/cr-done — sending agent closes out)
+pending
+  └─► claimed      (/backbone-inbox — receiver claims)
+        └─► complete  (/backbone-complete — receiver closes, file moves to archive/)
 ```
 
 Each transition: renames the file + updates `status` and `updated` in frontmatter.
 
 ---
 
+## Routing Modes
+
+| Mode | Field | Behavior |
+|------|-------|---------|
+| `direct` | `to: agent-name` | Delivered to the named agent's inbox. Use `to: any` for an unclaimed broadcast. |
+| `topic` | `topic: topic-name` | Delivered to all agents subscribed to that topic via `/backbone-subscribe`. First claimer wins (competing consumers). |
+
+Run `/backbone-roster` to see registered agents before publishing. Run `/backbone-join` to register this session.
+
+---
+
 ## Slash Commands
 
-| Command | Who runs it | Action |
-|---------|-------------|--------|
-| `/backbone-join` | any agent | Register presence, see who else is active |
-| `/backbone-roster` | any agent | See all active/recent agents and their capabilities |
-| `/cr-send` | any agent | Draft and persist a new CR, addressed to a named agent |
-| `/cr-inbox` | any agent | List CRs addressed to this agent, claim one |
-| `/cr-ready` | receiving agent | Fill implementation notes, signal sender |
-| `/cr-done` | sending agent | Fill follow-up notes, mark complete |
-| `/backbone-leave` | any agent | Write learned summary, mark presence inactive |
+| Command | Action |
+|---------|--------|
+| `/backbone-publish` | Publish a new message (any type, direct or topic) |
+| `/backbone-inbox` | See and claim messages addressed to this agent |
+| `/backbone-subscribe` | Subscribe to a topic |
+| `/backbone-unsubscribe` | Remove a topic subscription |
+| `/backbone-complete` | Fill completion notes, mark complete, archive the file |
 
 ---
 
@@ -95,14 +106,14 @@ All repos must be siblings under the same parent:
 ```
 ~/Play/github_repos/
   agent-backbone/    ← this repo
-  grostak-v2/        ← or any other project
-  stak-app/          ← or any other project
+  grostak-v2/
+  stak-app/
 ```
 
-The slash commands use `../agent-backbone/` relative to their respective repos. If your layout differs, update the path in each command file.
+Commands use `../agent-backbone/messages/` relative to their repos. The pre-flight check in each command will tell you if the path isn't accessible.
 
 ---
 
-## Audit Trail
+## Backward Compatibility
 
-CR files accumulate here permanently. `complete` CRs are filtered out of inbox views but remain as a decision log. A future `/cr-archive` command will move them to `messages/archive/`.
+Legacy `cr-*` files from v1 (before the generic bus) used a different frontmatter schema (`source_repo` instead of `from`, no `type` field). `/backbone-inbox` treats any file matching `cr-*-{status}.md` as `type: cr` for display purposes. Over time these can be migrated manually or left as-is — they won't break anything.

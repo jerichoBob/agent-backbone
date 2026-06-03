@@ -10,7 +10,7 @@
 | ---- | ---- | -------- | ------ | ----- |
 | v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v3 | Generic Message Bus | 0/23 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
+| v3 | Generic Message Bus | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
 
 ---
@@ -71,50 +71,50 @@
 
 ### Phase 1: Message Type Registry
 
-- [ ] Create messages/types/ directory with README.md explaining type schema format
-- [ ] Migrate CR schema into messages/types/cr.md
-- [ ] Define messages/types/task.md (task assignment schema)
-- [ ] Update messages/README.md to describe the generic base frontmatter
+- [x] Create messages/types/ directory with README.md explaining type schema format
+- [x] Migrate CR schema into messages/types/cr.md
+- [x] Define messages/types/task.md (task assignment schema)
+- [x] Update messages/README.md to describe the generic base frontmatter
 
 ### Phase 2: Generic Message Frontmatter
 
-- [ ] Define shared base frontmatter (id, type, status, routing, from, to, topic, created, updated)
-- [ ] Update messages/README.md with generic schema and routing modes
-- [ ] Document backward compat: cr-* files treated as type: cr
+- [x] Define shared base frontmatter (id, type, status, routing, from, to, topic, created, updated)
+- [x] Update messages/README.md with generic schema and routing modes
+- [x] Document backward compat: cr-* files treated as type: cr
 
 ### Phase 3: /backbone-publish Command
 
-- [ ] Create .claude/commands/backbone-publish.md
-- [ ] Implement type selection from messages/types/ registry
-- [ ] Implement direct routing (--to agent-name)
-- [ ] Implement topic routing (--topic topic-name)
-- [ ] Read type schema to drive content prompting
-- [ ] Write to messages/{type}-{id}-pending.md
+- [x] Create .claude/commands/backbone-publish.md
+- [x] Implement type selection from messages/types/ registry
+- [x] Implement direct routing (--to agent-name)
+- [x] Implement topic routing (--topic topic-name)
+- [x] Read type schema to drive content prompting
+- [x] Write to messages/{type}-{id}-pending.md
 
 ### Phase 4: /backbone-inbox Command
 
-- [ ] Create .claude/commands/backbone-inbox.md
-- [ ] Scan messages/ (not archive/) for pending files addressed to this agent (direct + topic subscriptions)
-- [ ] Group results by type in display
-- [ ] Implement claim flow (rename to claimed, update status)
+- [x] Create .claude/commands/backbone-inbox.md
+- [x] Scan messages/ (not archive/) for pending files addressed to this agent (direct + topic subscriptions)
+- [x] Group results by type in display
+- [x] Implement claim flow (rename to claimed, update status)
 
 ### Phase 5: /backbone-subscribe and /backbone-unsubscribe Commands
 
-- [ ] Create .claude/commands/backbone-subscribe.md (adds topic to presence record subscriptions list)
-- [ ] Create .claude/commands/backbone-unsubscribe.md (removes topic from subscriptions)
-- [ ] Update /backbone-join to display active subscriptions in roster
+- [x] Create .claude/commands/backbone-subscribe.md (adds topic to presence record subscriptions list)
+- [x] Create .claude/commands/backbone-unsubscribe.md (removes topic from subscriptions)
+- [x] Update /backbone-join to display active subscriptions in roster
 
 ### Phase 6: /backbone-complete Command
 
-- [ ] Create .claude/commands/backbone-complete.md
-- [ ] Find claimed messages for this session, prompt for completion section per type schema
-- [ ] Update status: complete, write updated timestamp
-- [ ] Move file to messages/archive/ (create if needed) — removes from active scan path
+- [x] Create .claude/commands/backbone-complete.md
+- [x] Find claimed messages for this session, prompt for completion section per type schema
+- [x] Update status: complete, write updated timestamp
+- [x] Move file to messages/archive/ (create if needed) — removes from active scan path
 
 ### Phase 7: Tests & Validation
 
-- [ ] Add tests/test-message-bus.sh covering publish, inbox filtering, topic subscriptions, full lifecycle
-- [ ] Verify tests/test-cr-workflow.sh still passes (backward compat)
+- [x] Add tests/test-message-bus.sh covering publish, inbox filtering, topic subscriptions, full lifecycle
+- [x] Verify tests/test-cr-workflow.sh still passes (backward compat)
 - [ ] Manual walkthrough: publish a task message, subscribe from another agent, claim and complete
 
 ---
