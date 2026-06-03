@@ -28,21 +28,21 @@ tags: [messaging, pub-sub, routing, generalization]
 
 ### User Stories
 
-- **US-1**: As a developer, I want to `/publish` a message of any registered type and have it routed to the right agent(s) without knowing which command to use
-- **US-2**: As a Claude agent, I want `/inbox` to show all messages addressed to me regardless of type, so I have one place to check
-- **US-3**: As a developer, I want to `/subscribe` to a topic so that any message published to that topic reaches this agent's inbox
+- **US-1**: As a developer, I want to `/backbone-publish` a message of any registered type and have it routed to the right agent(s) without knowing which command to use
+- **US-2**: As a Claude agent, I want `/backbone-inbox` to show all messages addressed to me regardless of type, so I have one place to check
+- **US-3**: As a developer, I want to `/backbone-subscribe` to a topic so that any message published to that topic reaches this agent's inbox
 - **US-4**: As a developer, I want to register a new message type by adding a schema file to `messages/types/` — no command changes required
 - **US-5**: As a developer, I want the existing CR workflow (`/cr-send`, `/cr-inbox`, etc.) to keep working unchanged — v3 is additive, not breaking
 
 ### Acceptance Criteria
 
-- AC-1: `/publish --type cr` produces a valid CR message using the existing CR schema — backward compatible with v1
-- AC-2: `/publish --type task` produces a task message using the task schema defined in `messages/types/task.md`
-- AC-3: `/inbox` shows all pending messages addressed to this agent, grouped by type
-- AC-4: `/subscribe topic:patient-api` registers this agent to receive all messages published to the `patient-api` topic (stored in `presence/` as a subscription list)
-- AC-5: A message published with `topic: patient-api` is delivered to all agents subscribed to that topic (visible in their `/inbox`)
-- AC-6: All messages share the same state machine: `pending → claimed → complete` with the same filename encoding
-- AC-7: Adding a new type schema to `messages/types/` makes that type available to `/publish` with no other changes
+- AC-1: `/backbone-publish --type cr` produces a valid CR message using the existing CR schema — backward compatible with v1
+- AC-2: `/backbone-publish --type task` produces a task message using the task schema defined in `messages/types/task.md`
+- AC-3: `/backbone-inbox` shows all pending messages addressed to this agent, grouped by type
+- AC-4: `/backbone-subscribe topic:patient-api` registers this agent to receive all messages published to the `patient-api` topic (stored in `presence/` as a subscription list)
+- AC-5: A message published with `topic: patient-api` is delivered to all agents subscribed to that topic (visible in their `/backbone-inbox`)
+- AC-6: All messages share the same state machine: `pending → claimed → complete` with the same filename encoding, and `/backbone-complete` moves the file to `messages/archive/`
+- AC-7: Adding a new type schema to `messages/types/` makes that type available to `/backbone-publish` with no other changes
 
 ### Out of Scope
 
@@ -84,9 +84,9 @@ tags: [messaging, pub-sub, routing, generalization]
 - Update `messages/README.md` to describe the generic schema (type + routing replaces the CR-specific fields)
 - Existing CR files remain valid — `type: cr` is implied by the CR-specific fields
 
-### Phase 3: `/publish` Command
+### Phase 3: `/backbone-publish` Command
 
-- Create `.claude/commands/publish.md`
+- Create `.claude/commands/backbone-publish.md`
 - Behavior:
   1. Ask (or accept as arg): `--type <type>` — list registered types from `messages/types/`
   2. Ask (or accept): `--to <agent>` for direct routing, or `--topic <topic>` for topic routing
@@ -94,34 +94,38 @@ tags: [messaging, pub-sub, routing, generalization]
   4. Draft the message content (same pattern as `/cr-send` — read context, fill in sections)
   5. Write to `messages/{type}-{id}-pending.md`
   6. Confirm written path, routing, and type
+- `/cr-send` remains as a wrapper: calls `/backbone-publish --type cr`
 
-### Phase 4: `/inbox` Command (generic)
+### Phase 4: `/backbone-inbox` Command
 
-- Create `.claude/commands/inbox.md` (replaces `/cr-inbox` as the primary entry point)
+- Create `.claude/commands/backbone-inbox.md` (replaces `/cr-inbox` as the primary entry point)
 - Behavior:
-  1. Require presence record (same as `/cr-inbox` — agent must be registered)
-  2. Scan `messages/` for `pending` files where `to` matches this agent OR this agent is subscribed to the message's `topic`
+  1. Require presence record (agent must be registered via `/backbone-join`)
+  2. Scan `messages/` (not `messages/archive/`) for `pending` files where `to` matches this agent OR this agent is subscribed to the message's `topic`
   3. Group results by type
   4. Developer selects a message; agent claims it (rename to `{type}-{id}-claimed.md`, update `status: claimed`)
   5. Display the full message content for the agent to act on
-- `/cr-inbox` remains as a thin wrapper: calls `/inbox` filtered to `type: cr`
+- `/cr-inbox` remains as a thin wrapper: calls `/backbone-inbox --type cr`
 
-### Phase 5: `/subscribe` and `/unsubscribe` Commands
+### Phase 5: `/backbone-subscribe` and `/backbone-unsubscribe` Commands
 
-- Create `.claude/commands/subscribe.md`
+- Create `.claude/commands/backbone-subscribe.md`
 - Behavior: adds a `subscriptions` list to this session's presence record — e.g. `subscriptions: [patient-api, schema-changes]`
-- `/inbox` checks subscriptions when scanning for relevant messages
-- Create `.claude/commands/unsubscribe.md` — removes a topic from the subscriptions list
+- `/backbone-inbox` checks subscriptions when scanning for relevant messages
+- Create `.claude/commands/backbone-unsubscribe.md` — removes a topic from the subscriptions list
 - Update `/backbone-join` to show active subscriptions in the roster display
 
-### Phase 6: `/complete` Command (generic done)
+### Phase 6: `/backbone-complete` Command
 
-- Create `.claude/commands/complete.md` (replaces `/cr-done` as primary entry point)
+- Create `.claude/commands/backbone-complete.md` (replaces `/cr-done` as primary entry point)
 - Behavior:
   1. Find claimed messages owned by this session
   2. Prompt agent to fill in the completion section (defined per type in the schema)
-  3. Rename to `{type}-{id}-complete.md`, update `status: complete`
-- `/cr-done` remains as a wrapper for `type: cr`
+  3. Update `status: complete`, write `updated` timestamp
+  4. Move file to `messages/archive/{type}-{id}-complete.md` — removes it from active scan path
+  5. Create `messages/archive/` if it doesn't exist
+- `/cr-done` remains as a wrapper for `type: cr` messages
+- This is the only way a message leaves the active `messages/` directory — keeps inbox scanning fast and clean
 
 ### Phase 7: Tests & Validation
 
@@ -135,11 +139,15 @@ tags: [messaging, pub-sub, routing, generalization]
 
 ### Design Philosophy
 
-**The bus doesn't know about content — only routing and state.** The type registry (`messages/types/`) is where schemas live. The commands (`/publish`, `/inbox`, `/complete`) are generic drivers that read the schema to know what to prompt for. This means adding a new message type requires zero command changes.
+**The bus doesn't know about content — only routing and state.** The type registry (`messages/types/`) is where schemas live. The commands (`/backbone-publish`, `/backbone-inbox`, `/backbone-complete`) are generic drivers that read the schema to know what to prompt for. This means adding a new message type requires zero command changes.
 
-**v1 CR commands are convenience wrappers, not deprecated.** `/cr-send`, `/cr-inbox`, `/cr-done` call through to `/publish --type cr`, `/inbox --type cr`, `/complete` respectively. They stay because they're ergonomic for the most common case.
+**All backbone commands share the `backbone-` prefix.** This makes the command set discoverable (`/backbone-<tab>`), allows the install script to glob `backbone-*.md`, and clearly separates backbone infrastructure from project-specific commands.
 
-**Topic routing uses the presence system.** Subscriptions live in the agent's presence record — there's no separate subscription store. When an agent joins with `subscriptions: [patient-api]`, that's how `/inbox` knows to show them topic messages. This keeps the data model flat.
+**v1 CR commands are convenience wrappers, not deprecated.** `/cr-send`, `/cr-inbox`, `/cr-done` call through to `/backbone-publish --type cr`, `/backbone-inbox --type cr`, `/backbone-complete` respectively. They stay because they're ergonomic for the most common case.
+
+**`/backbone-complete` is the only exit from the active message store.** Completed messages move to `messages/archive/` — they never accumulate in the active scan path. This keeps `/backbone-inbox` fast as message volume grows.
+
+**Topic routing uses the presence system.** Subscriptions live in the agent's presence record — there's no separate subscription store. When an agent joins with `subscriptions: [patient-api]`, that's how `/backbone-inbox` knows to show them topic messages. This keeps the data model flat.
 
 ### Architecture Decisions
 
@@ -150,8 +158,8 @@ tags: [messaging, pub-sub, routing, generalization]
 
 ### Relationship to v1 and v2
 
-- v1 CR workflow: `/cr-send` → `/publish --type cr`, `/cr-inbox` → `/inbox --type cr`, `/cr-done` → `/complete`. The v1 commands become wrappers.
-- v2 presence: `/subscribe` adds to the presence record. `/inbox` reads subscriptions from presence. `/backbone-join` shows subscriptions in the roster.
+- v1 CR workflow: `/cr-send` → `/backbone-publish --type cr`, `/cr-inbox` → `/backbone-inbox --type cr`, `/cr-done` → `/backbone-complete`. The v1 commands become wrappers.
+- v2 presence: `/backbone-subscribe` adds to the presence record. `/backbone-inbox` reads subscriptions from presence. `/backbone-join` shows subscriptions in the roster.
 - Neither v1 nor v2 is broken — v3 is a generalization layer on top.
 
 ### Dependencies
