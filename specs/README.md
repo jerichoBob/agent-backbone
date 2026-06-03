@@ -10,7 +10,8 @@
 | ---- | ---- | -------- | ------ | ----- |
 | v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v3 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
+| v3 | Generic Message Bus | 0/24 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
+| v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
 
 ---
 
@@ -61,6 +62,61 @@
 
 - [x] Add tests/test-cr-workflow.sh covering CR lifecycle (create, parse, status transitions, filename/frontmatter consistency)
 - [ ] Manual end-to-end walkthrough with a real stak-app ↔ grostak-v2 change as the first live CR
+
+---
+
+## v3: Generic Message Bus
+
+**Spec**: [spec-v3-generic-message-bus.md](spec-v3-generic-message-bus.md)
+
+### Phase 1: Message Type Registry
+
+- [ ] Create messages/types/ directory with README.md explaining type schema format
+- [ ] Migrate CR schema into messages/types/cr.md
+- [ ] Define messages/types/task.md (task assignment schema)
+- [ ] Update messages/README.md to describe the generic base frontmatter
+
+### Phase 2: Generic Message Frontmatter
+
+- [ ] Define shared base frontmatter (id, type, status, routing, from, to, topic, created, updated)
+- [ ] Update messages/README.md with generic schema and routing modes
+- [ ] Document backward compat: cr-* files treated as type: cr
+
+### Phase 3: /publish Command
+
+- [ ] Create .claude/commands/publish.md
+- [ ] Implement type selection from messages/types/ registry
+- [ ] Implement direct routing (--to agent-name)
+- [ ] Implement topic routing (--topic topic-name)
+- [ ] Read type schema to drive content prompting
+- [ ] Write to messages/{type}-{id}-pending.md
+
+### Phase 4: /inbox Command (generic)
+
+- [ ] Create .claude/commands/inbox.md
+- [ ] Scan messages/ for pending files addressed to this agent (direct + topic subscriptions)
+- [ ] Group results by type in display
+- [ ] Implement claim flow (rename to claimed, update status)
+- [ ] Wrap /cr-inbox as thin filter over /inbox --type cr
+
+### Phase 5: /subscribe and /unsubscribe Commands
+
+- [ ] Create .claude/commands/subscribe.md (adds topic to presence record subscriptions list)
+- [ ] Create .claude/commands/unsubscribe.md (removes topic from subscriptions)
+- [ ] Update /backbone-join to display active subscriptions in roster
+
+### Phase 6: /complete Command (generic)
+
+- [ ] Create .claude/commands/complete.md
+- [ ] Find claimed messages for this session, prompt for completion section per type schema
+- [ ] Rename to complete, update status
+- [ ] Wrap /cr-done as alias for /complete on type: cr messages
+
+### Phase 7: Tests & Validation
+
+- [ ] Add tests/test-message-bus.sh covering publish, inbox filtering, topic subscriptions, full lifecycle
+- [ ] Verify tests/test-cr-workflow.sh still passes (backward compat)
+- [ ] Manual walkthrough: publish a task message, subscribe from another agent, claim and complete
 
 ---
 

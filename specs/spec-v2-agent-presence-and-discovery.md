@@ -154,7 +154,7 @@ Presence is a **layer above** the CR message store, not a replacement:
 1. Should `/backbone-join` offer to read a relevant inactive agent's `learned` block directly into context, or just point to the file path?
 2. Is there value in a `blocking_on` field in the presence record — so an active agent can signal "I am waiting for the platform side to complete X" and the incoming grostak-v2 agent immediately sees it as a priority?
 3. Should the `capabilities` list be agent-declared (what I know) or task-declared (what I am doing)? Both are useful for different matching purposes.
-4. **HCI/UX observability (future spec)**: As the backbone grows, humans need a way to see what's happening between agents in real time — not just the file artifacts, but the conversation flow. What does that surface look like in Claude Code or a Pi agent context? A live feed of presence transitions? A visual graph of who's talking to whom and about what? This is a distinct spec when the time comes — the backbone is the substrate, the HCI layer is what makes it legible to the humans supervising it.
+4. **HCI/UX observability (v4)**: As the backbone grows, humans need a way to see what's happening between agents in real time — not just the file artifacts, but the conversation flow. What does that surface look like in Claude Code or a Pi agent context? A live feed of presence transitions? A visual graph of who's talking to whom and about what? This is v4 when the time comes — the backbone is the substrate, the HCI layer is what makes it legible to the humans supervising it.
 
 ---
 
