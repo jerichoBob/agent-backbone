@@ -9,7 +9,7 @@
 | Spec | Name | Progress | Status | Owner |
 | ---- | ---- | -------- | ------ | ----- |
 | v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v2 | Agent Presence & Discovery | 0/18 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
+| v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v3 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
 
 ---
@@ -70,46 +70,46 @@
 
 ### Phase 1: Presence Schema & Storage
 
-- [ ] Define presence record schema (YAML frontmatter + prose sections)
-- [ ] Define frontmatter fields: id, agent_name, repo, status, joined, updated, ttl_hours, capabilities
-- [ ] Define prose sections: Current Task, Architectural Knowledge, Learned
-- [ ] Define filename convention: presence-{agent_name}.md (overwrite on re-join)
-- [ ] Create agent-backbone/presence/ directory with README.md explaining schema and TTL semantics
-- [ ] Write example presence file (presence-example.md) as documentation
+- [x] Define presence record schema (YAML frontmatter + prose sections)
+- [x] Define frontmatter fields: id, agent_name, repo, status, joined, updated, ttl_hours, capabilities
+- [x] Define prose sections: Current Task, Architectural Knowledge, Learned
+- [x] Define filename convention: presence-{agent_name}.md (overwrite on re-join)
+- [x] Create agent-backbone/presence/ directory with README.md explaining schema and TTL semantics
+- [x] Write example presence file (presence-example.md) as documentation
 
 ### Phase 2: /backbone-join Command
 
-- [ ] Create .claude/commands/backbone-join.md in agent-backbone
-- [ ] Implement roster read: render active, stale, and recently-inactive agents on join
-- [ ] Implement name inference from working directory + task context
-- [ ] Implement developer confirmation/override of inferred name
-- [ ] Write presence record to ../agent-backbone/presence/
-- [ ] Surface capability matches from active agents relevant to current task
+- [x] Create .claude/commands/backbone-join.md in agent-backbone
+- [x] Implement roster read: render active, stale, and recently-inactive agents on join
+- [x] Implement name inference from working directory + task context
+- [x] Implement developer confirmation/override of inferred name
+- [x] Write presence record to ../agent-backbone/presence/
+- [x] Surface capability matches from active agents relevant to current task
 
 ### Phase 3: /backbone-leave Command
 
-- [ ] Create .claude/commands/backbone-leave.md
-- [ ] Implement learned section prompt (what was built, decided, open questions)
-- [ ] Update status to inactive and write updated timestamp
-- [ ] Test leave flow: presence record updated correctly, learned block present
+- [x] Create .claude/commands/backbone-leave.md
+- [x] Implement learned section prompt (what was built, decided, open questions)
+- [x] Update status to inactive and write updated timestamp
+- [x] Test leave flow: presence record updated correctly, learned block present
 
 ### Phase 4: /backbone-roster Command
 
-- [ ] Create .claude/commands/backbone-roster.md
-- [ ] Show active agents (name, repo, task, capabilities, time since join)
-- [ ] Show stale agents with staleness warning
-- [ ] Show recently inactive agents with learned summary
+- [x] Create .claude/commands/backbone-roster.md
+- [x] Show active agents (name, repo, task, capabilities, time since join)
+- [x] Show stale agents with staleness warning
+- [x] Show recently inactive agents with learned summary
 
 ### Phase 5: Capability Matching
 
-- [ ] Add capabilities list to presence frontmatter
-- [ ] Implement capability overlap scan on /backbone-join
-- [ ] Surface matching agents as "you may want to consult" hints
-- [ ] Document common capability tags in presence/README.md
+- [x] Add capabilities list to presence frontmatter
+- [x] Implement capability overlap scan on /backbone-join
+- [x] Surface matching agents as "you may want to consult" hints
+- [x] Document common capability tags in presence/README.md
 
 ### Phase 6: Tests & Validation
 
-- [ ] Add tests/test-presence-lifecycle.sh covering write, TTL staleness, leave update, learned block persistence
+- [x] Add tests/test-presence-lifecycle.sh covering write, TTL staleness, leave update, learned block persistence
 - [ ] Manual walkthrough with a real dual-repo session (one grostak-v2 + one stak-app agent)
 
 ---

@@ -2,7 +2,7 @@
 version: 1
 name: agent-presence-and-discovery
 display_name: "Agent Presence & Discovery"
-status: draft
+status: in-progress
 created: 2026-06-03
 depends_on: [a2a-coordination-backbone]
 tags: [cross-repo, agents, coordination, discovery, presence]
