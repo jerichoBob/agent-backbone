@@ -32,7 +32,7 @@ tags: [messaging, pub-sub, routing, generalization]
 - **US-2**: As a Claude agent, I want `/backbone-inbox` to show all messages addressed to me regardless of type, so I have one place to check
 - **US-3**: As a developer, I want to `/backbone-subscribe` to a topic so that any message published to that topic reaches this agent's inbox
 - **US-4**: As a developer, I want to register a new message type by adding a schema file to `messages/types/` — no command changes required
-- **US-5**: As a developer, I want the existing CR workflow (`/cr-send`, `/cr-inbox`, etc.) to keep working unchanged — v3 is additive, not breaking
+- **US-5**: As a developer, I want the CR message type to work seamlessly via `/backbone-publish --type cr` and `/backbone-inbox` with no separate CR-specific commands needed
 
 ### Acceptance Criteria
 
@@ -49,7 +49,7 @@ tags: [messaging, pub-sub, routing, generalization]
 - Guaranteed delivery or exactly-once semantics (filesystem is best-effort)
 - Message TTL or automatic expiry
 - Multi-hop routing (a message delivered to agent A is not automatically re-routed by A to agent B)
-- Breaking changes to v1 CR commands — they remain as convenience wrappers
+- Separate CR-specific commands — all CR interactions go through the generic backbone commands
 
 ---
 
@@ -94,7 +94,6 @@ tags: [messaging, pub-sub, routing, generalization]
   4. Draft the message content (same pattern as `/cr-send` — read context, fill in sections)
   5. Write to `messages/{type}-{id}-pending.md`
   6. Confirm written path, routing, and type
-- `/cr-send` remains as a wrapper: calls `/backbone-publish --type cr`
 
 ### Phase 4: `/backbone-inbox` Command
 
@@ -105,7 +104,7 @@ tags: [messaging, pub-sub, routing, generalization]
   3. Group results by type
   4. Developer selects a message; agent claims it (rename to `{type}-{id}-claimed.md`, update `status: claimed`)
   5. Display the full message content for the agent to act on
-- `/cr-inbox` remains as a thin wrapper: calls `/backbone-inbox --type cr`
+- Use `--type cr` arg to filter to CR messages only
 
 ### Phase 5: `/backbone-subscribe` and `/backbone-unsubscribe` Commands
 
@@ -124,7 +123,7 @@ tags: [messaging, pub-sub, routing, generalization]
   3. Update `status: complete`, write `updated` timestamp
   4. Move file to `messages/archive/{type}-{id}-complete.md` — removes it from active scan path
   5. Create `messages/archive/` if it doesn't exist
-- `/cr-done` remains as a wrapper for `type: cr` messages
+- Works identically for all message types including `type: cr`
 - This is the only way a message leaves the active `messages/` directory — keeps inbox scanning fast and clean
 
 ### Phase 7: Tests & Validation
@@ -143,7 +142,7 @@ tags: [messaging, pub-sub, routing, generalization]
 
 **All backbone commands share the `backbone-` prefix.** This makes the command set discoverable (`/backbone-<tab>`), allows the install script to glob `backbone-*.md`, and clearly separates backbone infrastructure from project-specific commands.
 
-**v1 CR commands are convenience wrappers, not deprecated.** `/cr-send`, `/cr-inbox`, `/cr-done` call through to `/backbone-publish --type cr`, `/backbone-inbox --type cr`, `/backbone-complete` respectively. They stay because they're ergonomic for the most common case.
+**CR is just a type, not a special case.** The v1 CR commands are gone — `/backbone-publish --type cr`, `/backbone-inbox`, and `/backbone-complete` handle everything they did. Less surface area, one mental model.
 
 **`/backbone-complete` is the only exit from the active message store.** Completed messages move to `messages/archive/` — they never accumulate in the active scan path. This keeps `/backbone-inbox` fast as message volume grows.
 
@@ -158,7 +157,7 @@ tags: [messaging, pub-sub, routing, generalization]
 
 ### Relationship to v1 and v2
 
-- v1 CR workflow: `/cr-send` → `/backbone-publish --type cr`, `/cr-inbox` → `/backbone-inbox --type cr`, `/cr-done` → `/backbone-complete`. The v1 commands become wrappers.
+- v1 CR workflow: superseded. CR is now `--type cr` on the generic commands. No separate CR commands.
 - v2 presence: `/backbone-subscribe` adds to the presence record. `/backbone-inbox` reads subscriptions from presence. `/backbone-join` shows subscriptions in the roster.
 - Neither v1 nor v2 is broken — v3 is a generalization layer on top.
 

@@ -10,7 +10,7 @@
 | ---- | ---- | -------- | ------ | ----- |
 | v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v3 | Generic Message Bus | 0/26 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
+| v3 | Generic Message Bus | 0/23 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
 
 ---
@@ -90,7 +90,6 @@
 - [ ] Implement topic routing (--topic topic-name)
 - [ ] Read type schema to drive content prompting
 - [ ] Write to messages/{type}-{id}-pending.md
-- [ ] Wrap /cr-send as backbone-publish --type cr
 
 ### Phase 4: /backbone-inbox Command
 
@@ -98,7 +97,6 @@
 - [ ] Scan messages/ (not archive/) for pending files addressed to this agent (direct + topic subscriptions)
 - [ ] Group results by type in display
 - [ ] Implement claim flow (rename to claimed, update status)
-- [ ] Wrap /cr-inbox as thin filter over /backbone-inbox --type cr
 
 ### Phase 5: /backbone-subscribe and /backbone-unsubscribe Commands
 
@@ -112,7 +110,6 @@
 - [ ] Find claimed messages for this session, prompt for completion section per type schema
 - [ ] Update status: complete, write updated timestamp
 - [ ] Move file to messages/archive/ (create if needed) — removes from active scan path
-- [ ] Wrap /cr-done as alias for /backbone-complete on type: cr messages
 
 ### Phase 7: Tests & Validation
 
