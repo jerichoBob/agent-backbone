@@ -8,7 +8,7 @@
 
 | Spec | Name | Progress | Status | Owner |
 | ---- | ---- | -------- | ------ | ----- |
-| v1 | A2A Coordination Backbone | 0/23 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
+| v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
 | v2 | Agent Presence & Discovery | 0/18 | ✏️ Draft | robert.w.seaton.jr@gmail.com |
 | v3 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
 
@@ -26,40 +26,40 @@
 
 ### Phase 1: Message Schema & Storage
 
-- [ ] Define the CR markdown file schema (YAML frontmatter + prose sections)
-- [ ] Define frontmatter fields: id, status, created, updated, source_repo, title, affected_endpoints, affected_tables
-- [ ] Define prose sections: Problem Statement, Solution Recommendation, Platform Implementation Notes, Mobile Implementation Notes
-- [ ] Define filename convention: cr-{id}-{status}.md with status lifecycle
-- [ ] Create agent-backbone/messages/ directory with README.md explaining schema and lifecycle
-- [ ] Write example CR file (cr-000-example.md) as documentation
+- [x] Define the CR markdown file schema (YAML frontmatter + prose sections)
+- [x] Define frontmatter fields: id, status, created, updated, source_repo, title, affected_endpoints, affected_tables
+- [x] Define prose sections: Problem Statement, Solution Recommendation, Platform Implementation Notes, Mobile Implementation Notes
+- [x] Define filename convention: cr-{id}-{status}.md with status lifecycle
+- [x] Create agent-backbone/messages/ directory with README.md explaining schema and lifecycle
+- [x] Write example CR file (cr-000-example.md) as documentation
 
 ### Phase 2: /cr-send Slash Command (stak-app)
 
-- [ ] Create .claude/commands/cr-send.md in the stak-app repo
-- [ ] Implement draft behavior: Claude drafts CR from context, writes to ../agent-backbone/messages/
-- [ ] Add pre-flight check that ../agent-backbone/messages/ is accessible
-- [ ] Output human-readable summary of what was written
-- [ ] Test the command end-to-end from the stak-app directory
+- [x] Create .claude/commands/cr-send.md in the stak-app repo
+- [x] Implement draft behavior: Claude drafts CR from context, writes to ../agent-backbone/messages/
+- [x] Add pre-flight check that ../agent-backbone/messages/ is accessible
+- [x] Output human-readable summary of what was written
+- [x] Test the command end-to-end from the stak-app directory
 
 ### Phase 3: /cr-inbox and /cr-ready Slash Commands (grostak-v2)
 
-- [ ] Create .claude/commands/cr-inbox.md in the grostak-v2 repo (shows draft CRs, claim/rename to platform-in-progress)
-- [ ] Create .claude/commands/cr-ready.md in the grostak-v2 repo (fills Platform Implementation Notes, renames to awaiting-mobile)
-- [ ] Ensure cr-inbox prompt includes endpoint signatures, request/response shapes, auth changes
-- [ ] Test cr-inbox claim flow (file rename + frontmatter update)
-- [ ] Test cr-ready flow (notes written, file renamed to awaiting-mobile)
+- [x] Create .claude/commands/cr-inbox.md in the grostak-v2 repo (shows draft CRs, claim/rename to platform-in-progress)
+- [x] Create .claude/commands/cr-ready.md in the grostak-v2 repo (fills Platform Implementation Notes, renames to awaiting-mobile)
+- [x] Ensure cr-inbox prompt includes endpoint signatures, request/response shapes, auth changes
+- [x] Test cr-inbox claim flow (file rename + frontmatter update)
+- [x] Test cr-ready flow (notes written, file renamed to awaiting-mobile)
 
 ### Phase 4: /cr-inbox Slash Command (stak-app)
 
-- [ ] Create .claude/commands/cr-inbox.md in the stak-app repo (shows awaiting-mobile CRs, displays Platform Implementation Notes)
-- [ ] Implement claim flow (renames to mobile-in-progress)
-- [ ] Create .claude/commands/cr-done.md in stak-app (marks complete, writes Mobile Implementation Notes, renames to complete)
-- [ ] Test full handoff: platform-ready → mobile picks up → done
-- [ ] Verify complete CR file contains full audit trail (both sides' notes)
+- [x] Create .claude/commands/cr-inbox.md in the stak-app repo (shows awaiting-mobile CRs, displays Platform Implementation Notes)
+- [x] Implement claim flow (renames to mobile-in-progress)
+- [x] Create .claude/commands/cr-done.md in stak-app (marks complete, writes Mobile Implementation Notes, renames to complete)
+- [x] Test full handoff: platform-ready → mobile picks up → done
+- [x] Verify complete CR file contains full audit trail (both sides' notes)
 
 ### Phase 5: Tests & Validation
 
-- [ ] Add tests/test-cr-workflow.sh covering CR lifecycle (create, parse, status transitions, filename/frontmatter consistency)
+- [x] Add tests/test-cr-workflow.sh covering CR lifecycle (create, parse, status transitions, filename/frontmatter consistency)
 - [ ] Manual end-to-end walkthrough with a real stak-app ↔ grostak-v2 change as the first live CR
 
 ---

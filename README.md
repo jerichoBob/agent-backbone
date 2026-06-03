@@ -113,3 +113,15 @@ The slash commands use relative paths (`../agent-backbone/messages/`) — if you
 **stak-app** is the patient-facing iOS app. It's currently wired to Supabase directly but is being migrated to call the grostak-v2 API instead. That migration is why cross-repo coordination matters — every new clinical feature (protocols, bloodwork, messaging) needs both sides to move together.
 
 For the full architecture picture, see [`.claude/context-architecture-relationship.md`](.claude/context-architecture-relationship.md).
+
+---
+
+## Changelog
+
+0.1.0
+
+### Release Notes
+
+#### v0.1.0 (2026-06-03)
+
+- feat: initial agent-backbone scaffold with v1 CR workflow and v2 presence/discovery specs [`e326ff8`]
