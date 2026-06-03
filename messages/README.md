@@ -1,6 +1,6 @@
 # Change Request (CR) Message Store
 
-This directory is the shared message bus between `grostak-v2` and `stak-app`. CR files are written by Claude agents and read by Claude agents — no manual copy-paste required.
+This directory is the shared message bus for any agents registered on the backbone. CR files are written by Claude agents and read by Claude agents — no manual copy-paste required.
 
 ---
 
@@ -11,7 +11,7 @@ cr-{id}-{status}.md
 ```
 
 - `{id}` — timestamp slug: `YYYYMMDD-HHMMSS` (collision-free, sortable)
-- `{status}` — one of: `draft` | `platform-in-progress` | `awaiting-mobile` | `mobile-in-progress` | `complete`
+- `{status}` — one of: `draft` | `in-progress` | `awaiting-response` | `complete`
 
 Status is encoded in the filename so `ls messages/` is immediately informative and renames are atomic.
 
@@ -19,9 +19,8 @@ Status is encoded in the filename so `ls messages/` is immediately informative a
 
 ```
 cr-20260603-143022-draft.md
-cr-20260603-143022-platform-in-progress.md
-cr-20260603-143022-awaiting-mobile.md
-cr-20260603-143022-mobile-in-progress.md
+cr-20260603-143022-in-progress.md
+cr-20260603-143022-awaiting-response.md
 cr-20260603-143022-complete.md
 ```
 
@@ -32,10 +31,11 @@ cr-20260603-143022-complete.md
 ```yaml
 ---
 id: YYYYMMDD-HHMMSS
-status: draft | platform-in-progress | awaiting-mobile | mobile-in-progress | complete
+status: draft | in-progress | awaiting-response | complete
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-source_repo: stak-app | grostak-v2
+from: agent-name          # registered name of the sending agent
+to: agent-name | any      # registered name of the target agent, or "any"
 title: Short human-readable title
 affected_endpoints:
   - METHOD /path/to/endpoint
@@ -44,18 +44,20 @@ affected_tables:
 ---
 ```
 
+`from` and `to` use agent names registered via `/backbone-join`. Run `/backbone-roster` to see registered agents before sending. Use `to: any` for broadcast CRs that any available agent can claim.
+
 ---
 
 ## Prose Sections
 
-Every CR file has four sections. The first two are filled in by the stak-app agent at creation. The last two are filled in during implementation.
+Every CR file has four sections. The first two are filled in by the sending agent. The last two are filled in during implementation.
 
 | Section | Filled by | When |
 |---------|-----------|------|
-| **Problem Statement** | stak-app agent | On `/cr-send` |
-| **Solution Recommendation** | stak-app agent | On `/cr-send` |
-| **Platform Implementation Notes** | grostak-v2 agent | On `/cr-ready` |
-| **Mobile Implementation Notes** | stak-app agent | On `/cr-done` |
+| **Problem Statement** | sending agent | On `/cr-send` |
+| **Solution Recommendation** | sending agent | On `/cr-send` |
+| **Implementation Notes** | receiving agent | On `/cr-ready` |
+| **Follow-up Notes** | sending agent | On `/cr-done` |
 
 ---
 
@@ -63,10 +65,9 @@ Every CR file has four sections. The first two are filled in by the stak-app age
 
 ```
 draft
-  └─► platform-in-progress   (grostak-v2 claims via /cr-inbox)
-        └─► awaiting-mobile   (grostak-v2 signals done via /cr-ready)
-              └─► mobile-in-progress  (stak-app claims via /cr-inbox)
-                    └─► complete       (stak-app signals done via /cr-done)
+  └─► in-progress        (receiving agent claims via /cr-inbox)
+        └─► awaiting-response   (/cr-ready — receiving agent signals done)
+              └─► complete       (/cr-done — sending agent closes out)
 ```
 
 Each transition: renames the file + updates `status` and `updated` in frontmatter.
@@ -75,28 +76,30 @@ Each transition: renames the file + updates `status` and `updated` in frontmatte
 
 ## Slash Commands
 
-| Command | Repo | Action |
-|---------|------|--------|
-| `/cr-send` | stak-app | Draft and persist a new CR |
-| `/cr-inbox` | grostak-v2 | List `draft` CRs, claim one |
-| `/cr-ready` | grostak-v2 | Fill platform notes, mark `awaiting-mobile` |
-| `/cr-inbox` | stak-app | List `awaiting-mobile` CRs, claim one |
-| `/cr-done` | stak-app | Fill mobile notes, mark `complete` |
+| Command | Who runs it | Action |
+|---------|-------------|--------|
+| `/backbone-join` | any agent | Register presence, see who else is active |
+| `/backbone-roster` | any agent | See all active/recent agents and their capabilities |
+| `/cr-send` | any agent | Draft and persist a new CR, addressed to a named agent |
+| `/cr-inbox` | any agent | List CRs addressed to this agent, claim one |
+| `/cr-ready` | receiving agent | Fill implementation notes, signal sender |
+| `/cr-done` | sending agent | Fill follow-up notes, mark complete |
+| `/backbone-leave` | any agent | Write learned summary, mark presence inactive |
 
 ---
 
 ## Directory Layout Assumption
 
-All three repos must be siblings under the same parent:
+All repos must be siblings under the same parent:
 
 ```
 ~/Play/github_repos/
   agent-backbone/    ← this repo
-  grostak-v2/
-  stak-app/
+  grostak-v2/        ← or any other project
+  stak-app/          ← or any other project
 ```
 
-The slash commands use `../agent-backbone/messages/` relative to their respective repos. If your layout differs, update the path in each command file.
+The slash commands use `../agent-backbone/` relative to their respective repos. If your layout differs, update the path in each command file.
 
 ---
 

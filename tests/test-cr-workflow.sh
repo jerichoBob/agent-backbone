@@ -48,7 +48,8 @@ assert_contains "$EXAMPLE" "^id:" "has id field"
 assert_contains "$EXAMPLE" "^status:" "has status field"
 assert_contains "$EXAMPLE" "^created:" "has created field"
 assert_contains "$EXAMPLE" "^updated:" "has updated field"
-assert_contains "$EXAMPLE" "^source_repo:" "has source_repo field"
+assert_contains "$EXAMPLE" "^from:" "has from field"
+assert_contains "$EXAMPLE" "^to:" "has to field"
 assert_contains "$EXAMPLE" "^title:" "has title field"
 assert_contains "$EXAMPLE" "affected_endpoints:" "has affected_endpoints field"
 assert_contains "$EXAMPLE" "affected_tables:" "has affected_tables field"
@@ -58,12 +59,34 @@ echo ""
 echo "3. Prose sections (cr-000-example.md)"
 assert_contains "$EXAMPLE" "^# Problem Statement" "has Problem Statement section"
 assert_contains "$EXAMPLE" "^# Solution Recommendation" "has Solution Recommendation section"
-assert_contains "$EXAMPLE" "^# Platform Implementation Notes" "has Platform Implementation Notes section"
-assert_contains "$EXAMPLE" "^# Mobile Implementation Notes" "has Mobile Implementation Notes section"
+assert_contains "$EXAMPLE" "^# Implementation Notes" "has Implementation Notes section"
+assert_contains "$EXAMPLE" "^# Follow-up Notes" "has Follow-up Notes section"
 
-# ── Test 4: Status lifecycle transitions (simulated) ─────────────────────────
+# ── Test 4: from/to agent addressing ─────────────────────────────────────────
 echo ""
-echo "4. Status lifecycle"
+echo "4. Agent addressing"
+assert_contains "$EXAMPLE" "^from: " "from field has a value"
+assert_contains "$EXAMPLE" "^to: " "to field has a value"
+# Verify "any" broadcast is a valid to value
+BROADCAST_FILE="$TMP_DIR/cr-broadcast-test.md"
+cat > "$BROADCAST_FILE" <<'EOF'
+---
+id: "broadcast-test"
+status: draft
+created: 2026-06-03
+updated: 2026-06-03
+from: stak-app:test
+to: any
+title: "Broadcast test"
+affected_endpoints: []
+affected_tables: []
+---
+EOF
+assert_contains "$BROADCAST_FILE" "^to: any" "to: any is valid for broadcasts"
+
+# ── Test 5: Status lifecycle transitions (simulated) ─────────────────────────
+echo ""
+echo "5. Status lifecycle"
 ID="$(date +%Y%m%d-%H%M%S)-test"
 DRAFT="$TMP_DIR/cr-${ID}-draft.md"
 
@@ -73,7 +96,8 @@ id: "${ID}"
 status: draft
 created: 2026-06-03
 updated: 2026-06-03
-source_repo: stak-app
+from: stak-app:test-sender
+to: grostak-api:test-receiver
 title: "Test CR"
 affected_endpoints:
   - POST /test
@@ -89,11 +113,11 @@ Test problem.
 
 Test solution.
 
-# Platform Implementation Notes
+# Implementation Notes
 
 <!-- pending -->
 
-# Mobile Implementation Notes
+# Follow-up Notes
 
 <!-- pending -->
 EOF
@@ -101,67 +125,59 @@ EOF
 assert_file_exists "$DRAFT" "draft CR created"
 assert_contains "$DRAFT" "status: draft" "draft status in frontmatter"
 
-# Simulate platform claim
-PLATFORM_IP="$TMP_DIR/cr-${ID}-platform-in-progress.md"
-cp "$DRAFT" "$PLATFORM_IP"
-sed -i '' 's/status: draft/status: platform-in-progress/' "$PLATFORM_IP"
+# Simulate claim → in-progress
+IN_PROGRESS="$TMP_DIR/cr-${ID}-in-progress.md"
+cp "$DRAFT" "$IN_PROGRESS"
+sed -i '' 's/status: draft/status: in-progress/' "$IN_PROGRESS"
 rm "$DRAFT"
-assert_file_exists "$PLATFORM_IP" "renamed to platform-in-progress"
+assert_file_exists "$IN_PROGRESS" "renamed to in-progress"
 assert_not_exists "$DRAFT" "draft file removed after claim"
-assert_contains "$PLATFORM_IP" "status: platform-in-progress" "status updated in frontmatter"
+assert_contains "$IN_PROGRESS" "status: in-progress" "status updated in frontmatter"
 
-# Simulate platform ready
-AWAITING="$TMP_DIR/cr-${ID}-awaiting-mobile.md"
-cp "$PLATFORM_IP" "$AWAITING"
-sed -i '' 's/status: platform-in-progress/status: awaiting-mobile/' "$AWAITING"
-rm "$PLATFORM_IP"
-assert_file_exists "$AWAITING" "renamed to awaiting-mobile"
-assert_not_exists "$PLATFORM_IP" "platform-in-progress file removed"
-assert_contains "$AWAITING" "status: awaiting-mobile" "status updated in frontmatter"
+# Simulate /cr-ready → awaiting-response
+AWAITING="$TMP_DIR/cr-${ID}-awaiting-response.md"
+cp "$IN_PROGRESS" "$AWAITING"
+sed -i '' 's/status: in-progress/status: awaiting-response/' "$AWAITING"
+rm "$IN_PROGRESS"
+assert_file_exists "$AWAITING" "renamed to awaiting-response"
+assert_not_exists "$IN_PROGRESS" "in-progress file removed"
+assert_contains "$AWAITING" "status: awaiting-response" "status updated in frontmatter"
 
-# Simulate mobile claim
-MOBILE_IP="$TMP_DIR/cr-${ID}-mobile-in-progress.md"
-cp "$AWAITING" "$MOBILE_IP"
-sed -i '' 's/status: awaiting-mobile/status: mobile-in-progress/' "$MOBILE_IP"
-rm "$AWAITING"
-assert_file_exists "$MOBILE_IP" "renamed to mobile-in-progress"
-assert_not_exists "$AWAITING" "awaiting-mobile file removed"
-
-# Simulate complete
+# Simulate /cr-done → complete
 COMPLETE="$TMP_DIR/cr-${ID}-complete.md"
-cp "$MOBILE_IP" "$COMPLETE"
-sed -i '' 's/status: mobile-in-progress/status: complete/' "$COMPLETE"
-rm "$MOBILE_IP"
+cp "$AWAITING" "$COMPLETE"
+sed -i '' 's/status: awaiting-response/status: complete/' "$COMPLETE"
+rm "$AWAITING"
 assert_file_exists "$COMPLETE" "renamed to complete"
 assert_contains "$COMPLETE" "status: complete" "final status is complete"
 
-# ── Test 5: Filename convention ──────────────────────────────────────────────
+# ── Test 6: Filename convention ──────────────────────────────────────────────
 echo ""
-echo "5. Filename convention"
+echo "6. Filename convention"
 VALID_NAMES=(
   "cr-20260603-143022-draft.md"
-  "cr-20260603-143022-platform-in-progress.md"
-  "cr-20260603-143022-awaiting-mobile.md"
-  "cr-20260603-143022-mobile-in-progress.md"
+  "cr-20260603-143022-in-progress.md"
+  "cr-20260603-143022-awaiting-response.md"
   "cr-20260603-143022-complete.md"
 )
 for name in "${VALID_NAMES[@]}"; do
-  if echo "$name" | grep -qE '^cr-[0-9]{8}-[0-9]{6}-(draft|platform-in-progress|awaiting-mobile|mobile-in-progress|complete)\.md$'; then
+  if echo "$name" | grep -qE '^cr-[0-9]{8}-[0-9]{6}-(draft|in-progress|awaiting-response|complete)\.md$'; then
     pass "valid filename: $name"
   else
     fail "invalid filename pattern: $name"
   fi
 done
 
-# ── Test 6: Commands exist ───────────────────────────────────────────────────
+# ── Test 7: Commands exist ───────────────────────────────────────────────────
 echo ""
-echo "6. Command files"
+echo "7. Command files"
 COMMANDS_DIR="$(cd "$(dirname "$0")/.." && pwd)/.claude/commands"
-assert_file_exists "$COMMANDS_DIR/cr-send.md"           "/cr-send command exists"
-assert_file_exists "$COMMANDS_DIR/cr-inbox-platform.md" "/cr-inbox-platform command exists"
-assert_file_exists "$COMMANDS_DIR/cr-ready.md"          "/cr-ready command exists"
-assert_file_exists "$COMMANDS_DIR/cr-inbox-mobile.md"   "/cr-inbox-mobile command exists"
-assert_file_exists "$COMMANDS_DIR/cr-done.md"           "/cr-done command exists"
+assert_file_exists "$COMMANDS_DIR/cr-send.md"    "/cr-send command exists"
+assert_file_exists "$COMMANDS_DIR/cr-inbox.md"   "/cr-inbox command (unified) exists"
+assert_file_exists "$COMMANDS_DIR/cr-ready.md"   "/cr-ready command exists"
+assert_file_exists "$COMMANDS_DIR/cr-done.md"    "/cr-done command exists"
+assert_not_exists  "$COMMANDS_DIR/cr-inbox-platform.md" "cr-inbox-platform deleted"
+assert_not_exists  "$COMMANDS_DIR/cr-inbox-mobile.md"   "cr-inbox-mobile deleted"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""

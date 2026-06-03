@@ -3,7 +3,8 @@ id: "000"
 status: complete
 created: 2026-06-03
 updated: 2026-06-03
-source_repo: stak-app
+from: stak-app:refill-flow
+to: grostak-api:core
 title: "Example: Add refill request endpoint"
 affected_endpoints:
   - POST /api/refills
@@ -20,9 +21,9 @@ The mobile app needs to allow patients to submit refill requests for their curre
 
 Add a `POST /api/refills` endpoint to grostak-v2 that accepts a `{ medication_id, notes }` body, creates a `refill_requests` row scoped to the authenticated patient's tenant, and returns the created record. Add a `GET /api/refills/:id` for status polling.
 
-# Platform Implementation Notes
+# Implementation Notes
 
-<!-- Filled in by grostak-v2 agent via /cr-ready -->
+<!-- Filled in by receiving agent via /cr-ready -->
 
 **Endpoints added:**
 
@@ -50,9 +51,9 @@ CREATE TABLE refill_requests (
 
 **Auth:** Standard tenant middleware — `clerk_org_id` → `tenant_id` resolution applies. RLS policy added: patients can only read their own refill requests.
 
-# Mobile Implementation Notes
+# Follow-up Notes
 
-<!-- Filled in by stak-app agent via /cr-done -->
+<!-- Filled in by sending agent via /cr-done -->
 
 **Files changed:**
 

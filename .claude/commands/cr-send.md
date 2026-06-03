@@ -1,34 +1,54 @@
-# /cr-send — Send a Change Request to the backbone
+# /cr-send — Send a Change Request to a named agent
 
-Use this command from **stak-app** (or any consumer repo) to draft and persist a structured change request to the agent-backbone message store.
+Use this command from any repo to draft and persist a structured change request addressed to a specific agent on the backbone.
 
 ## Pre-flight check
 
-Before drafting, verify the backbone messages directory is accessible:
+Verify the backbone is accessible and check who's registered:
 
 ```bash
 ls ../agent-backbone/messages/ 2>/dev/null || echo "MISSING"
+ls ../agent-backbone/presence/ 2>/dev/null
 ```
 
-If the output is `MISSING`, stop and tell the developer:
-> `../agent-backbone/messages/` is not accessible. Make sure `agent-backbone` is a sibling directory to this repo.
+If `messages/` is `MISSING`: stop and tell the developer:
+> `../agent-backbone/` is not accessible. Make sure `agent-backbone` is a sibling directory to this repo.
 
-## What to draft
+## Step 1: Show the roster
+
+Read all files in `../agent-backbone/presence/` and display a brief roster so the developer can choose a target:
+
+```
+Registered agents:
+  grostak-api:core       active   schema-analysis, patient-api
+  stak-app:refill-flow   active   mobile-hooks, patient-api
+  (or: no agents registered — use "any" to broadcast)
+```
+
+If no presence records exist, continue with `to: any`.
+
+## Step 2: Determine target
+
+If agents are registered, ask: "Who should receive this CR? (enter agent name, or 'any' to broadcast)"
+
+## Step 3: Draft the CR
 
 Read the current conversation context to understand:
 
-1. **What change is needed** — what does the mobile app need that the platform doesn't yet provide?
-2. **Which endpoints are affected** — existing endpoints being modified, or new ones needed
-3. **Which tables are affected** — schema changes, new tables, or new columns
+1. **What change is needed**
+2. **Which endpoints are affected** — existing or new
+3. **Which tables are affected**
 4. **Why** — what user-facing problem this solves
 
-If context is sparse, ask the developer one question: *"What change do you need the platform to make?"* then proceed.
+If context is sparse, ask: *"What change do you need the receiving agent to make?"* then proceed.
 
-## CR file format
+## Step 4: Write the CR file
 
-Generate an ID from the current date/time: `YYYYMMDD-HHMMSS`
+Generate an ID: `YYYYMMDD-HHMMSS`
 
-Write the file to `../agent-backbone/messages/cr-{id}-draft.md` with this structure:
+Determine the `from` name: read this session's presence record from `../agent-backbone/presence/` if it exists, otherwise use the working directory name as a fallback (e.g. `stak-app:unknown`).
+
+Write to `../agent-backbone/messages/cr-{id}-draft.md`:
 
 ```markdown
 ---
@@ -36,7 +56,8 @@ id: "{id}"
 status: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-source_repo: stak-app
+from: {this-agent-name}
+to: {target-agent-name | any}
 title: "{short imperative title}"
 affected_endpoints:
   - METHOD /path
@@ -46,33 +67,33 @@ affected_tables:
 
 # Problem Statement
 
-{1-3 sentences: what the mobile app needs and why the current platform doesn't support it}
+{1-3 sentences: what needs to change and why}
 
 # Solution Recommendation
 
-{What the platform should build — endpoint signatures, request/response shapes, schema changes,
-auth requirements. Be specific enough that a grostak-v2 agent can act on this without asking
-follow-up questions.}
+{Specific enough that the receiving agent can implement without follow-up questions:
+endpoint signatures, request/response shapes, schema changes, auth requirements.}
 
-# Platform Implementation Notes
+# Implementation Notes
 
-<!-- To be filled in by grostak-v2 agent via /cr-ready -->
+<!-- To be filled in by receiving agent via /cr-ready -->
 
-# Mobile Implementation Notes
+# Follow-up Notes
 
-<!-- To be filled in by stak-app agent via /cr-done -->
+<!-- To be filled in by sending agent via /cr-done -->
 ```
 
-## After writing
-
-Confirm to the developer:
+## Step 5: Confirm
 
 ```
 CR written: ../agent-backbone/messages/cr-{id}-draft.md
 
-Title: {title}
+Title:  {title}
+From:   {from}
+To:     {to}
 Affects: {endpoint list}
 Tables:  {table list}
 
-Switch to your grostak-v2 session and run /cr-inbox to pick this up.
+{if to != "any": Switch to your {to} session and run /cr-inbox to pick this up.}
+{if to == "any": Any registered agent can pick this up via /cr-inbox.}
 ```

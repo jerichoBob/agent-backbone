@@ -1,41 +1,43 @@
-# /cr-done — Signal mobile implementation complete
+# /cr-done — Close out a change request
 
-Use this command from **stak-app** after implementing the mobile side of a change request.
+Use this command after the sending agent has applied the changes from an `awaiting-response` CR.
 
 ## Pre-flight check
 
-Find the in-progress CR for this session:
+Find CRs awaiting response that were originally sent by this agent:
 
 ```bash
-ls ../agent-backbone/messages/cr-*-mobile-in-progress.md 2>/dev/null
+ls ../agent-backbone/messages/cr-*-awaiting-response.md 2>/dev/null
 ```
 
-If none found: "No CR is currently claimed as mobile-in-progress. Run /cr-inbox first."
+Read each file's frontmatter. Show only those where `from` matches this session's agent name.
 
-If multiple found: list them and ask the developer which one to complete.
+If none found: "No CRs are awaiting your response."
 
-## Step 1: Fill in Mobile Implementation Notes
+If multiple found: list them and ask which one to close.
 
-Read the CR file. Then write the **Mobile Implementation Notes** section with:
+## Step 1: Fill in Follow-up Notes
 
-- **Files changed** — which source files were added or modified
-- **API calls wired** — which new endpoints are now being called and from where
-- **UI changes** — any screens, components, or hooks added/modified
+Read the CR file. Write the **Follow-up Notes** section with:
+
+- **Files changed** — source files added or modified
+- **What was wired** — which new endpoints, schemas, or APIs are now in use
 - **Tests** — test files added and what they cover
-- **Known gaps** — anything deferred or not yet handled
+- **Known gaps** — anything deferred
 
 ## Step 2: Transition the file
 
-1. Update the CR file: fill in Mobile Implementation Notes, set `status: complete`, set `updated: {today}`
-2. Rename: `cr-{id}-mobile-in-progress.md` → `cr-{id}-complete.md`
+1. Fill in the Follow-up Notes section
+2. Set `status: complete`, `updated: {today}`
+3. Rename: `cr-{id}-awaiting-response.md` → `cr-{id}-complete.md`
 
 ## Step 3: Confirm
 
 ```
 CR complete: ../agent-backbone/messages/cr-{id}-complete.md
 
-Mobile Implementation Notes written:
-{brief bullet summary of what was documented}
+Follow-up Notes written:
+{brief bullet summary}
 
 This CR is now part of the permanent audit trail in agent-backbone/messages/.
 ```
