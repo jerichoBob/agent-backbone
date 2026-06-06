@@ -37,7 +37,7 @@ Stale agents (past TTL — may be abandoned):
     Subscriptions: (none)
 
 Recently inactive:
-  agent-backbone:cr-workflow  (agent-backbone, left 2h ago)
+  agent-backbone:maintainer  (agent-backbone, left 2h ago)
     Learned: CR workflow implemented, /cr-inbox now requires presence record
 
 (No agents registered yet.)  ← shown if presence/ is empty
@@ -51,7 +51,7 @@ If `presence/` is empty, say so and continue to registration.
 Infer a name from:
 
 1. The working directory name (e.g. `grostak-v2` → `grostak-api`)
-2. The current task or conversation context (e.g. `patient-schema`, `refill-flow`, `cr-workflow`)
+2. The current task or conversation context (e.g. `patient-schema`, `refill-flow`, `maintainer`)
 
 Format: `{repo-short}:{task-slug}` — lowercase, hyphens, no spaces.
 

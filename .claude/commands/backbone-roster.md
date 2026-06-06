@@ -53,11 +53,10 @@ STALE  ({n} agents — past TTL, may be abandoned)
 
 RECENTLY INACTIVE  ({n} agents)
 ────────────────────────────────────────────
-  agent-backbone:cr-workflow
+  agent-backbone:maintainer
   Repo:         agent-backbone
   Left:         2 hours ago
   Learned:
-    - Implemented /cr-inbox as a generic command filtered by agent name
     - Decided against daemon-based TTL; reading agent computes staleness
     - Open: name inference needs testing across more repo layouts
     - Gotcha: sed -i '' syntax differs on macOS vs Linux

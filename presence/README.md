@@ -19,7 +19,7 @@ Examples:
 ```
 presence-grostak-api:patient-schema.md
 presence-stak-app:refill-flow.md
-presence-agent-backbone:cr-workflow.md
+presence-agent-backbone:maintainer.md
 ```
 
 ---
@@ -90,7 +90,7 @@ Use these tags in the `capabilities` list for consistent matching across session
 | `patient-api` | Knows the patient-facing API surface |
 | `auth-flow` | Understands Clerk JWT + tenant middleware |
 | `mobile-hooks` | Knows stak-app React hooks and data layer |
-| `cr-workflow` | Has worked on the CR coordination system |
+| `backbone-development` | Working on the backbone itself (specs, commands, tests) |
 | `migrations` | Has written or reviewed DB migrations |
 | `test-infrastructure` | Knows the test setup and patterns |
 

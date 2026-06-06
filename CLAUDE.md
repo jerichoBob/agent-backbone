@@ -21,7 +21,7 @@ It holds no application code. Its role is shared context, cross-project slash co
 - `.claude/context-architecture-relationship.md` — canonical explanation of how grostak-v2 and stak-app relate
 - `.claude/learnings.md` — captured lessons and correction rules (read before doing anything non-trivial)
 - `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
-- `tests/` — lifecycle tests (cr-workflow, presence-lifecycle, message-bus — 124/124 passing)
+- `tests/` — lifecycle tests (backbone-workflow, presence-lifecycle, message-bus — 124/124 passing)
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -44,7 +44,33 @@ The cross-project coordination problem: schema changes on the platform side requ
 | `/backbone-leave` | Mark inactive, write what you learned |
 | `/backbone-roster` | Show all agents (active/stale/inactive) |
 
-Install commands into a project repo: `bash ../agent-backbone/scripts/install-cr-commands.sh`
+Install commands into a project repo: `bash ../agent-backbone/scripts/install-backbone-commands.sh`
+
+## Development workflow
+
+When working on this repo:
+
+1. **Specs first** — see `specs/README.md` for the tracker. Each spec has phases and tasks.
+2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh` before marking tasks complete.
+3. **Update docs** — keep README.md and specs/README.md in sync with code changes.
+
+## File purposes
+
+| File/Dir | Purpose |
+|----------|---------|
+| `messages/` | Active message bus (pending & claimed messages) |
+| `messages/types/cr.md` | Change request schema definition |
+| `messages/types/task.md` | Task assignment schema definition |
+| `messages/archive/` | Completed messages (moved by /backbone-complete) |
+| `presence/` | Agent registry (active/stale/inactive agents) |
+| `specs/README.md` | Progress tracker for all specs (v1-v4) |
+| `tests/test-backbone-workflow.sh` | Backbone workflow test (39 assertions) |
+| `tests/test-message-bus.sh` | Generic bus test (56 assertions) |
+| `tests/test-presence-lifecycle.sh` | Presence test (27 assertions) |
+| `scripts/install-backbone-commands.sh` | Copy backbone commands into project repos |
+| `.claude/commands/backbone-*.md` | Backbone slash commands (8 commands) |
+| `.claude/commands/correction.md` | Capture lessons into `.claude/learnings.md` |
+| `.claude/commands/learning.md` | Alias for correction |
 
 ## Learnings
 

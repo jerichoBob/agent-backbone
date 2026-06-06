@@ -61,7 +61,7 @@ agent-backbone/
 │   ├── spec-v2-agent-presence-and-discovery.md
 │   └── spec-v3-generic-message-bus.md
 ├── scripts/           # Installation and setup utilities
-│   └── install-cr-commands.sh
+│   └── install-backbone-commands.sh
 ├── tests/             # Lifecycle and workflow tests
 │   ├── test-cr-workflow.sh
 │   ├── test-message-bus.sh
@@ -125,7 +125,7 @@ These commands are installed to your project repos (grostak-v2, stak-app, etc.) 
 From any project repo:
 
 ```bash
-bash ../agent-backbone/scripts/install-cr-commands.sh
+bash ../agent-backbone/scripts/install-backbone-commands.sh
 ```
 
 This symlinks `.claude/commands/backbone-*.md` from agent-backbone into your repo's `.claude/commands/` directory.

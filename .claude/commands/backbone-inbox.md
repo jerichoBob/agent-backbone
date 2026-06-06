@@ -45,7 +45,7 @@ Otherwise, group by type and display:
 Pending Messages for {agent_name}
 
 CR  (change requests)
-  #1  cr-20260603-143022    From: stak-app:refill-flow    → direct
+  #1  cr-20260606-143022    From: stak-app:refill-flow    → direct
       Add refill request endpoint
       Tables: refill_requests
 

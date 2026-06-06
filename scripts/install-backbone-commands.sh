@@ -2,7 +2,7 @@
 # Installs backbone slash commands into a target repo's .claude/commands/ directory.
 # Globs backbone-*.md — no explicit list to maintain.
 #
-# Usage: bash scripts/install-cr-commands.sh <target-repo-path>
+# Usage: bash scripts/install-backbone-commands.sh <target-repo-path>
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ BACKBONE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SOURCE_DIR="$BACKBONE_DIR/.claude/commands"
 
 usage() {
-  echo "Usage: bash scripts/install-cr-commands.sh <target-repo-path>"
+  echo "Usage: bash scripts/install-backbone-commands.sh <target-repo-path>"
   exit 1
 }
 
