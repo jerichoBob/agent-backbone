@@ -13,12 +13,15 @@ It holds no application code. Its role is shared context, cross-project slash co
 
 ## What lives here
 
-- `.claude/commands/` — slash commands for grostak-v2 operations (deploy, test, db-extract, etc.)
-- `.claude/scripts/` — utility scripts (seed provisioning, data exports, infra setup)
+- `.claude/commands/` — backbone slash commands (publish, inbox, join, leave, complete, subscribe, etc.)
+- `messages/` — active message bus (pending and claimed messages)
+- `messages/types/` — message type registry (cr, task, and future types)
+- `messages/archive/` — completed messages (moved here by /backbone-complete)
+- `presence/` — agent registry (who's active, what they're working on, their capabilities)
 - `.claude/context-architecture-relationship.md` — canonical explanation of how grostak-v2 and stak-app relate
-- `.claude/dev-environment-setup.md` — one-time Clerk + tenant provisioning steps
 - `.claude/learnings.md` — captured lessons and correction rules (read before doing anything non-trivial)
-- `specs/` — SDD specs for cross-project coordination features (this backbone itself)
+- `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
+- `tests/` — lifecycle tests (cr-workflow, presence-lifecycle, message-bus — 124/124 passing)
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -28,17 +31,20 @@ Tenant resolution: every API request carries a Clerk JWT with an `org_id` claim 
 
 The cross-project coordination problem: schema changes on the platform side require corresponding changes in the mobile app. This repo exists to make that coordination explicit and trackable rather than copy-pasted between sessions.
 
-## Key commands (run from grostak-v2/)
+## Backbone commands (run from any repo with commands installed)
 
-| Task | Command |
-|------|---------|
-| Local deploy (full Docker pipeline) | `bash scripts/local-docker-run.sh` |
-| UAT deploy | `bash scripts/uat-deploy-app.sh` |
-| Run all tests (local) | `bash tests/run-all.sh` |
-| DB snapshot | `tsx scripts/db-extract.ts --env local` |
-| Refresh AWS deploy creds | `bash scripts/assume-deploy-role.sh` |
+| Command | Purpose |
+|---------|---------|
+| `/backbone-join` | Register this session, see who else is active |
+| `/backbone-publish` | Draft and send a message (cr, task, or any registered type) |
+| `/backbone-inbox` | See messages addressed to you, claim one to work on |
+| `/backbone-complete` | Write completion notes, archive the message |
+| `/backbone-subscribe` | Subscribe to a topic (messages to that topic appear in your inbox) |
+| `/backbone-unsubscribe` | Remove a topic subscription |
+| `/backbone-leave` | Mark inactive, write what you learned |
+| `/backbone-roster` | Show all agents (active/stale/inactive) |
 
-Slash commands for these are in `.claude/commands/` and should be run from the `grostak-v2` repo context.
+Install commands into a project repo: `bash ../agent-backbone/scripts/install-cr-commands.sh`
 
 ## Learnings
 

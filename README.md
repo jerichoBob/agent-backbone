@@ -1,15 +1,15 @@
 # agent-backbone
 
-The connective tissue between two Claude Code agents that would otherwise have to shout across the room.
+A persistent coordination layer for Claude Code agents working across multiple repos.
 
 ---
 
 ## The problem it solves
 
-`grostak-v2` (the platform) and `stak-app` (the mobile app) share an API contract that's still evolving. A schema change on the platform means a corresponding change in the mobile app. A new endpoint means updated client code. Right now the workflow looks like this:
+When you're working on a system split across multiple repos (`grostak-v2` platform + `stak-app` mobile), cross-repo coordination is manual copy-paste. Schema changes on the platform require mobile app updates. New endpoints need client code. The workflow currently looks like this:
 
-1. Ask Claude in `stak-app` to analyze what needs to change and why
-2. Copy-paste that analysis into a new Claude Code session in `grostak-v2`
+1. Ask Claude in `stak-app` to analyze what needs to change
+2. Copy-paste that analysis into a new Claude session in `grostak-v2`
 3. Implement the platform side
 4. Mentally note what changed
 5. Switch back to `stak-app`, re-explain what the platform did
@@ -18,25 +18,31 @@ The connective tissue between two Claude Code agents that would otherwise have t
 
 Steps 2, 4, and 5 are the problem. Context bleeds out. Notes get lost. The agents that did the thinking don't talk to each other — you're the message bus.
 
-This repo fixes that.
+This repo fixes that with a generic message bus + presence/discovery system.
 
 ---
 
 ## What it is
 
-A shared directory that both Claude agents can read and write. No server, no API, no ceremony. Just a well-defined place to put structured coordination messages (change requests) that survive the gap between sessions.
+A shared directory that multiple Claude agents can read and write. No server, no API, no ceremony. Just a well-defined place for:
 
-The agents stay in their own repos. You stay in control. But instead of copy-pasting, you run a slash command and the handoff writes itself.
+- **Structured messages** — change requests, task assignments, notifications (any type you define)
+- **Agent presence** — who's working on what, where, with what capabilities
+- **Persistent context** — messages survive session boundaries; agents can pick up where others left off
+
+The agents stay in their own repos. You stay in control. But instead of copy-pasting, you run a slash command and the coordination writes itself.
 
 ```plaintext
-stak-app/              grostak-v2/
-    |                       |
-    | /cr-send              | /cr-inbox
-    |                       | /cr-ready
-    +----> agent-backbone/messages/ <----+
-                    |
-              /cr-inbox (stak-app)
-              /cr-done
+stak-app/                    grostak-v2/
+    |                             |
+    | /backbone-join              | /backbone-join
+    | /backbone-publish           | /backbone-inbox
+    |                             | /backbone-complete
+    +-----> agent-backbone/ <-----+
+                |
+          ├─ messages/        ← active message bus
+          ├─ presence/        ← agent registry
+          └─ archive/         ← completed work
 ```
 
 ---
@@ -45,49 +51,84 @@ stak-app/              grostak-v2/
 
 ```plaintext
 agent-backbone/
-├── messages/          # Change request files (the message bus)
+├── messages/          # Active message bus (pending & claimed messages)
+│   ├── types/         # Message type schemas (cr, task, etc.)
+│   └── archive/       # Completed messages
+├── presence/          # Agent registry (who's online, what they're working on)
 ├── specs/             # Spec-Driven Development specs for this backbone itself
 │   ├── README.md      # Progress tracker — what's been built, what hasn't
-│   └── spec-v1-a2a-coordination-backbone.md
+│   ├── spec-v1-a2a-coordination-backbone.md
+│   ├── spec-v2-agent-presence-and-discovery.md
+│   └── spec-v3-generic-message-bus.md
+├── scripts/           # Installation and setup utilities
+│   └── install-cr-commands.sh
+├── tests/             # Lifecycle and workflow tests
+│   ├── test-cr-workflow.sh
+│   ├── test-message-bus.sh
+│   └── test-presence-lifecycle.sh
 ├── .claude/
-│   ├── commands/      # Slash commands (currently grostak-v2 ops — see note below)
-│   ├── scripts/       # Utility scripts spanning both repos
+│   ├── commands/      # Backbone slash commands (install these to your project repos)
 │   ├── context-architecture-relationship.md  # How grostak-v2 and stak-app relate
 │   ├── dev-environment-setup.md              # One-time Clerk + tenant setup
-│   └── learnings.md                          # Hard-won lessons, read before doing anything non-trivial
+│   └── learnings.md                          # Hard-won lessons
 ├── CLAUDE.md          # Instructions for Claude Code instances working here
 └── README.md          # You are here
 ```
 
 ---
 
-## The change request lifecycle
+## Message lifecycle
 
-Each coordination event is a markdown file in `messages/`. The filename encodes its state:
+Each coordination event is a markdown file in `messages/`. The filename encodes type and state:
 
 ```plaintext
-cr-{id}-draft.md               ← stak-app wrote it, platform hasn't seen it
-cr-{id}-platform-in-progress.md  ← grostak-v2 agent claimed it
-cr-{id}-awaiting-mobile.md     ← platform done, mobile side's turn
-cr-{id}-mobile-in-progress.md  ← stak-app agent claimed it
-cr-{id}-complete.md            ← both sides done
+{type}-{id}-pending.md     ← published, waiting to be claimed
+{type}-{id}-claimed.md     ← agent claimed it, working on it
+{type}-{id}-complete.md    ← done, moved to messages/archive/
 ```
 
-Inside each file: problem statement, solution recommendation, platform implementation notes, mobile implementation notes. By the time it's complete, the file is a self-contained record of what changed and why.
+Examples:
+
+```plaintext
+cr-20260603-143022-pending.md      ← change request awaiting platform team
+task-20260604-091500-claimed.md    ← task assignment in progress
+```
+
+Inside each file: YAML frontmatter (routing, timestamps, metadata) + prose sections defined by the message type schema. By the time it's complete and archived, it's a self-contained record of what was requested, who did it, and what was done.
 
 ---
 
-## Slash commands (in progress)
+## Slash commands
 
-These commands are being built as part of [spec v1](specs/spec-v1-a2a-coordination-backbone.md):
+These commands are installed to your project repos (grostak-v2, stak-app, etc.) via symlinks:
 
-| Command | Repo | What it does |
-|---------|------|--------------|
-| `/cr-send` | stak-app | Claude drafts a change request from context and writes it to `messages/` |
-| `/cr-inbox` | grostak-v2 | Shows pending CRs, lets you claim one |
-| `/cr-ready` | grostak-v2 | Fills in platform implementation notes, signals mobile side |
-| `/cr-inbox` | stak-app | Shows platform-ready CRs with implementation notes |
-| `/cr-done` | stak-app | Marks complete, writes mobile implementation notes |
+### Core Message Bus
+
+| Command | What it does |
+|---------|--------------|
+| `/backbone-publish` | Draft and publish a message (any type: cr, task, etc.) with direct or topic routing |
+| `/backbone-inbox` | See and claim messages addressed to you (direct messages + subscribed topics) |
+| `/backbone-complete` | Fill completion notes, mark done, archive the message |
+| `/backbone-subscribe` | Subscribe to a topic (messages published to that topic appear in your inbox) |
+| `/backbone-unsubscribe` | Remove a topic subscription |
+
+### Presence & Discovery
+
+| Command | What it does |
+|---------|--------------|
+| `/backbone-join` | Register this session as an agent (shows roster of active/stale/inactive agents) |
+| `/backbone-leave` | Mark yourself inactive, write learned summary |
+| `/backbone-roster` | Show active agents (name, repo, task, capabilities) and recent activity |
+
+### Installation
+
+From any project repo:
+
+```bash
+bash ../agent-backbone/scripts/install-cr-commands.sh
+```
+
+This symlinks `.claude/commands/backbone-*.md` from agent-backbone into your repo's `.claude/commands/` directory.
 
 ---
 
@@ -122,6 +163,8 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ### Release Notes
 
-#### v0.1.0 (2026-06-03)
+#### v0.1.0 (2026-06-06)
 
-- feat: initial agent-backbone scaffold with v1 CR workflow and v2 presence/discovery specs [`e326ff8`]
+- feat: v3 generic message bus with type registry, backbone-* commands, archive, tests [`b0224bd`]
+- feat: v2 agent presence and discovery with join/leave/roster commands [`d61715d`]
+- feat: initial agent-backbone scaffold with v1 CR workflow spec [`e326ff8`]
