@@ -57,6 +57,8 @@ Format: `{repo-short}:{task-slug}` — lowercase, hyphens, no spaces.
 
 Examples: `grostak-api:patient-schema`, `stak-app:refill-flow`, `agent-backbone:v2-presence`
 
+**Maintainer detection:** If the working directory is `agent-backbone` and the task context is maintenance, improvement, or issue triage (rather than a specific feature), suggest `agent-backbone:maintainer` as the name. This is the well-known name that feedback messages are routed to.
+
 Present the inferred name to the developer:
 
 ```
@@ -81,7 +83,8 @@ ttl_hours: 4
 capabilities:
   - {inferred-capability-1}
   - {inferred-capability-2}
-subscriptions: []
+subscriptions:
+  - backbone-meta    # if agent_name == agent-backbone:maintainer; else []
 ---
 
 # Current Task
@@ -130,3 +133,4 @@ Run /backbone-subscribe <topic> to receive topic broadcasts.
 
 - If a presence file already exists with the same name but a different `joined` time, warn: "A presence record for {name} already exists (joined {time}). Overwriting."
 - Capabilities are inferred — the developer can edit the presence file directly after registration if needed
+- **Maintainer pattern**: when registering as `agent-backbone:maintainer`, automatically write `subscriptions: [backbone-meta]` — this is how feedback messages (type: feedback, topic: backbone-meta) reach the backbone maintainer's inbox without any manual subscription step

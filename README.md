@@ -132,6 +132,57 @@ This symlinks `.claude/commands/backbone-*.md` from agent-backbone into your rep
 
 ---
 
+## Message types
+
+Message types are defined in `messages/types/`. Each type has a schema file that defines its frontmatter fields and prose sections.
+
+| Type | Schema | Purpose |
+|------|--------|---------|
+| `cr` | [messages/types/cr.md](messages/types/cr.md) | Change request — coordinate schema/API changes across repos |
+| `task` | [messages/types/task.md](messages/types/task.md) | Task assignment — delegate discrete work to another agent |
+| `feedback` | [messages/types/feedback.md](messages/types/feedback.md) | Bug reports, ideas, questions about the backbone itself |
+
+To add a new type, write a schema file in `messages/types/{type}.md`. No command changes needed — `/backbone-publish` reads the registry dynamically.
+
+---
+
+## Sending feedback to the backbone
+
+The backbone is itself a message recipient. From any repo, any agent can report a bug, propose an improvement, or ask a question:
+
+```
+/backbone-publish --type feedback
+```
+
+Feedback messages route to `topic: backbone-meta`. The backbone maintainer session — whoever has joined as `agent-backbone:maintainer` — is auto-subscribed to that topic and sees all feedback in `/backbone-inbox`.
+
+**To become the maintainer:** open a session in `agent-backbone/` and run `/backbone-join`. When the working directory is `agent-backbone`, the command suggests `agent-backbone:maintainer` as the name and auto-subscribes to `backbone-meta`.
+
+```plaintext
+stak-app/            grostak-v2/         agent-backbone/
+    |                     |                    |
+    | /backbone-publish   | /backbone-publish   | /backbone-join
+    |   --type feedback   |   --type feedback   |   (as maintainer)
+    |                     |                    |
+    +------> topic: backbone-meta <------------+
+                                    /backbone-inbox shows feedback
+```
+
+---
+
+## Development status
+
+See [specs/README.md](specs/README.md) for the full spec tracker.
+
+| Spec | Status | Progress |
+|------|--------|----------|
+| v1: A2A Coordination Backbone | 🔄 In Progress | 22/23 tasks |
+| v2: Agent Presence & Discovery | 🔄 In Progress | 17/18 tasks |
+| v3: Generic Message Bus | 🔄 In Progress | 22/23 tasks |
+| v4: HCI/UX Observability Layer | 💡 Idea | 0/0 tasks |
+
+---
+
 ## Assumed directory layout
 
 This repo expects to live as a sibling to the other two:

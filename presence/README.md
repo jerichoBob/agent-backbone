@@ -98,6 +98,28 @@ Free-form tags are fine too — these are just the most common ones. Consistent 
 
 ---
 
+## Well-Known Agent Names
+
+Some agent names are reserved by convention and carry special behavior:
+
+| Name | Repo | Behavior |
+|------|------|----------|
+| `agent-backbone:maintainer` | `agent-backbone` | Auto-subscribes to `backbone-meta` on join — receives all feedback messages |
+
+### The Maintainer Pattern
+
+Any session working on the backbone itself (fixing bugs, implementing specs, triaging feedback) should join as `agent-backbone:maintainer`. `/backbone-join` suggests this name automatically when the working directory is `agent-backbone` and the task is maintenance-flavored.
+
+When registered as `agent-backbone:maintainer`, the backbone acts as a first-class message recipient. Other agents across any repo can send feedback via:
+
+```
+/backbone-publish --type feedback
+```
+
+The feedback message routes to `topic: backbone-meta`. The maintainer session sees it in `/backbone-inbox` because it is subscribed to that topic automatically.
+
+---
+
 ## Slash Commands
 
 | Command | Action |
