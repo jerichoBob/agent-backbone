@@ -118,7 +118,13 @@ You may want to consult:
 
 If no matches, skip the hints section.
 
-## Step 5: Confirm registration
+## Step 5: Load and display backbone conventions
+
+Read `../agent-backbone/CONVENTIONS.md`. Display it to the developer under a "Backbone Conventions" header so they are aware of the operating rules before the session proceeds.
+
+If the file does not exist, skip silently.
+
+## Step 6: Confirm registration
 
 ```
 Registered: {agent_name}

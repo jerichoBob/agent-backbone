@@ -82,6 +82,33 @@ Type:    {type}
 Work on this, then run /backbone-complete to close it out.
 ```
 
+## Step 5: Spec Handover Protocol (for CR and task messages)
+
+**Every CR or task received from another agent must be hydrated as a local spec before implementation begins.**
+
+The sender's spec version numbers are theirs — this project has its own sequence. Do not use the sender's version number.
+
+### On claim:
+
+1. **Immediately send an ack** to the sender via a new backbone message:
+   ```
+   Claimed your {type} "{title}". Creating local spec now — will notify when complete.
+   ```
+
+2. **Run `/sdd-spec`** with a description synthesized from the CR/task content. This creates a local `spec-vN` (next number in this project's sequence) that captures the why, what, and how — including any context from the backbone message. Reference the sender's spec in the Technical Notes (e.g. "Sourced from stak-app backbone CR, their spec-v18").
+
+3. **Implement against the local spec**, marking tasks complete as you go.
+
+4. **Notify the sender when done** via a new backbone message including:
+   - Your local spec number and filename
+   - The commit hash
+   - Any follow-up they need to do (e.g. "deployed to UAT, ready for your Phases 2–7")
+
+### Why:
+- The sender's spec lives in their repo. This project needs its own spec for traceability, code review context, and future sessions.
+- Acks prevent duplicate work — without them, a sender doesn't know if their CR was picked up or ignored.
+- The local spec number sequence is the authoritative history for this project.
+
 ## Notes
 
 - `archive/` is never scanned — completed messages are invisible here by design
