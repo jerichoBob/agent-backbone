@@ -10,6 +10,29 @@ ls ../agent-backbone/messages/types/ 2>/dev/null || echo "MISSING"
 
 If `MISSING`: stop — `../agent-backbone/` is not accessible.
 
+## Step 0: Clarify intent
+
+**MUST ask this before doing anything else, even if context seems obvious.**
+
+Ask the user:
+
+```
+What is the intent of this message?
+  a) Informational — share context or artifacts; no action required from the receiver
+  b) Task — delegate a unit of work with acceptance criteria
+  c) Change request — ask the receiver to make a code/schema change
+  d) Other — describe:
+```
+
+Wait for the answer. Use it to guide the message type and tone:
+
+- Informational → use a lightweight prose message; do NOT add acceptance criteria or a to-do list
+- Task → proceed to Step 1 and select `task` type
+- Change request → proceed to Step 1 and select `cr` type
+- Other → ask a follow-up to clarify before proceeding
+
+**Never infer intent from context and skip this step.**
+
 ## Step 1: Determine message type
 
 If `--type <type>` was provided as an argument, use it directly.
