@@ -19,9 +19,13 @@ Stop if not found. Extract `agent_name` and `subscriptions` (may be empty).
 
 ## Step 2: Scan for pending messages
 
-Scan `../agent-backbone/messages/` (not `archive/`) for files matching `*-pending.md`.
+Always run this shell command first to get a live listing — never use prior knowledge of the inbox state:
 
-For each file, read its frontmatter. Include it if:
+```bash
+ls ../agent-backbone/messages/*-pending.md 2>/dev/null || echo "NONE"
+```
+
+For each file returned, read its frontmatter. Include it if:
 
 - `routing: direct` AND (`to` == this agent's name OR `to` == `any`)
 - `routing: topic` AND this agent's `subscriptions` list contains the message's `topic`
