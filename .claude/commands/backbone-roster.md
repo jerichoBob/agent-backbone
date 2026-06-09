@@ -12,7 +12,17 @@ If `MISSING`: stop — `../agent-backbone/` is not accessible.
 
 ## Step 1: Read all presence records
 
-Read every `presence-*.md` file in `../agent-backbone/presence/`. For each, extract:
+**IMPORTANT: Always fetch fresh from disk. Never use cached file contents from earlier in the conversation — presence files are written by other agents and change between reads.**
+
+Use the Bash tool to get the current file list:
+
+```bash
+ls ../agent-backbone/presence/presence-*.md 2>/dev/null || echo "MISSING"
+```
+
+Then use the Read tool on each file individually to force a fresh read. Do not skip any file because you think you already have its contents.
+
+For each file, extract:
 
 - `agent_name`, `repo`, `status`, `joined`, `updated`, `ttl_hours`, `capabilities`
 - First sentence of **Current Task**
