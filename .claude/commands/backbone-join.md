@@ -70,6 +70,14 @@ Use the confirmed name for registration.
 
 ## Step 3: Write the presence record
 
+**Get the current timestamp first — do not approximate:**
+
+```bash
+date -u +%Y-%m-%dT%H:%M:%SZ
+```
+
+Use the exact output for both `joined` and `updated` fields. Never use midnight (`T00:00:00Z`) or any guessed value.
+
 Write to `../agent-backbone/presence/presence-{agent_name}.md`:
 
 ```markdown

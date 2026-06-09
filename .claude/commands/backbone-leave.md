@@ -33,11 +33,17 @@ Example:
 
 ## Step 2: Update the presence record
 
+**Get the current timestamp first — do not approximate:**
+
+```bash
+date -u +%Y-%m-%dT%H:%M:%SZ
+```
+
 Read the current presence file. Update:
 
 1. Fill in the `# Learned` section with the synthesized bullets
 2. Set `status: inactive`
-3. Set `updated: {current-ISO-timestamp}`
+3. Set `updated:` to the exact shell output above
 
 Write the updated file back (same path — do not rename).
 
