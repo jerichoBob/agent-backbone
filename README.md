@@ -32,7 +32,7 @@ A shared directory that multiple Claude agents can read and write. No server, no
 
 The agents stay in their own repos. You stay in control. But instead of copy-pasting, you run a slash command and the coordination writes itself.
 
-```plaintext
+```text
 stak-app/                    grostak-v2/
     |                             |
     | /backbone-join              | /backbone-join

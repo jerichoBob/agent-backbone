@@ -75,13 +75,13 @@ updated: YYYY-MM-DD
 
 ## Filename Convention
 
-```
+```text
 {type}-{id}-{status}.md
 ```
 
 Examples:
 
-```
+```text
 cr-20260603-143022-pending.md
 cr-20260603-143022-claimed.md
 task-20260603-150000-pending.md
@@ -92,7 +92,7 @@ task-20260603-150000-complete.md   ← moved to messages/archive/ by /backbone-c
 
 All types share the same lifecycle:
 
-```
+```text
 pending
   └─► claimed      (/backbone-inbox — receiver claims)
         └─► complete  (/backbone-complete — receiver closes, file moves to archive/)

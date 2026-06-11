@@ -1,10 +1,15 @@
 {
-  "default": true,
-  "MD013": false,
-  "MD024": false,
-  "MD033": false,
-  "MD034": false,
-  "MD036": false,
-  "MD041": false,
-  "MD060": false
+  "extends": "default",
+  "MD025": false,
+  "MD040": true,
+  "no-hard-tabs": false,
+  "line-length": {
+    "line_length": 120,
+    "heading_line_length": 120,
+    "headers": true,
+    "code_blocks": false,
+    "code_lines": false,
+    "tables": false,
+    "headers_only": false
+  }
 }

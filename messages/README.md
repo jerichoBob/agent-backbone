@@ -6,7 +6,7 @@ This directory is the active message bus for the agent backbone. Messages are wr
 
 ## File Naming Convention
 
-```
+```text
 {type}-{id}-{status}.md
 ```
 
@@ -18,7 +18,7 @@ Status is encoded in the filename so `ls messages/` is immediately informative a
 
 **Examples:**
 
-```
+```text
 cr-20260603-143022-pending.md
 cr-20260603-143022-claimed.md
 task-20260604-091500-pending.md
@@ -66,7 +66,7 @@ Schemas for all registered types live in `messages/types/`. Adding a new type re
 
 All message types share the same lifecycle:
 
-```
+```text
 pending
   └─► claimed      (/backbone-inbox — receiver claims)
         └─► complete  (/backbone-complete — receiver closes, file moves to archive/)

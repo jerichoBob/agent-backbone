@@ -6,7 +6,7 @@ This directory holds presence records for all agents currently registered on the
 
 ## File Naming Convention
 
-```
+```text
 presence-{agent_name}.md
 ```
 
@@ -16,7 +16,7 @@ One file per named agent. **Overwritten on re-join** — no accumulation of old 
 
 Examples:
 
-```
+```text
 presence-grostak-api:patient-schema.md
 presence-stak-app:refill-flow.md
 presence-agent-backbone:maintainer.md

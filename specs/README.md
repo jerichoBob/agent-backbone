@@ -8,10 +8,10 @@
 
 | Spec | Name | Progress | Status | Owner |
 | ---- | ---- | -------- | ------ | ----- |
-| v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v3 | Generic Message Bus | 22/23 | 🔄 In Progress | robert.w.seaton.jr@gmail.com |
-| v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | robert.w.seaton.jr@gmail.com |
+| v1 | A2A Coordination Backbone | 22/23 | 🔄 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v2 | Agent Presence & Discovery | 17/18 | 🔄 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v3 | Generic Message Bus | 22/23 | 🔄 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
