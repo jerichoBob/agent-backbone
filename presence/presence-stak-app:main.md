@@ -2,8 +2,8 @@
 agent_name: stak-app:main
 repo: stak-app
 status: active
-joined: 2026-06-10T18:27:39Z
-updated: 2026-06-10T18:27:39Z
+joined: 2026-06-13T22:04:36Z
+updated: 2026-06-13T22:04:36Z
 ttl_hours: 4
 capabilities:
   - mobile-react-native
@@ -15,17 +15,23 @@ subscriptions: []
 
 # Current Task
 
-Starting new session. mvp-strategy Stage 5 complete (CHECKLIST_FINAL.md produced). Next up: spec-v18 Phases 2–7 (injection_site end-to-end — SQLite migration, API client contract, write path, sync read path, downstream verification, regression test). Also need to pick up any messages from grostak-v2 re: v29/v30 endpoint contracts.
+Resuming v20 Phase 5 validation (push token registration against UAT); fixing syncSubscription 500 on UAT; then moving to STORY-023 (mark dose skipped) as sprint priority #1.
 
 # Architectural Knowledge
 
-- stak-app is a React Native + Expo iOS app; backend is exclusively grostak-v2 Hono API (migration from Supabase in progress)
+- stak-app is a React Native + Expo iOS app; backend is exclusively grostak-v2 Hono API (Supabase fully removed)
 - Hard constraint: stak-app must not call Clerk SDK for anything except auth token acquisition (sign-in/sign-up). All account management routes through grostak-v2 which calls Clerk Backend API server-side
 - Local SQLite (lib/db.ts) is the offline store; sync.ts drives syncAll() to reconcile with grostak-v2
 - env switching: APP_ENV=uat → .env.uat → api.grostak-uat.parallax-intelligence.ai; unset → .env.local → 192.168.86.199:3001
-- spec-v18 exists in stak-app (specs/spec-v18-injection-site-field-drop.md) — grostak-v2 Phase 1 complete (commit d99d3ec), UAT deployed. stak-app Phases 2–7 pending.
-- grostak-v2 has shipped v29 (patient account mgmt: email/password/delete/export), v30 (notifications infra), v32 (dose status SKIPPED, WeightLog model, pausedAt) — stak-app needs to wire these
-- mvp-strategy: Stages 0–5 complete. CHECKLIST_FINAL.md: 46 MVP stories, 6 GTM. Critical blockers: STORY-005, STORY-023, STORY-042/043, STORY-064, STORY-073
+- Build path: xcodebuild + xcrun simctl, not npm run ios (Expo devicectl breaks on iOS 26.x betas)
+- Metro must be in tmux session 'metro'; kill and restart when switching envs
+- Simulator on secondary display: content group y=-1093, all osascript tap y-coords are negative
+- osascript keyboard/mouse actions must be in a single script block — splitting causes focus loss to terminal
+- syncSubscription is 500ing on UAT (GET /patients/me/subscription) — under investigation
+- initDb race condition fixed: _initPromise guard added to prevent concurrent migration runs (duplicate column: injection_site)
+- Billing model: patient FREE/PRO subscription GONE from gv2 v1.48.1. AI Coach gated by clinic tier (GROWTH+), not patient sub. Do NOT wire patient billing UI.
+- spec-v20 Phases 1-4 complete and committed; Phase 5 (manual UAT validation) in progress
+- Per-step error logging added to syncAll() to identify which step 500s
 
 # Learned
 
