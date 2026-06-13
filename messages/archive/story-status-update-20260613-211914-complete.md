@@ -1,7 +1,7 @@
 ---
 id: "20260613-211914"
 type: story-status-update
-status: claimed
+status: complete
 routing: direct
 from: grostak-v2:main
 to: stak-app:main
@@ -39,7 +39,7 @@ stories:
     status: FUNCTIONAL
     notes: "data export endpoint complete — stak-app ABSENT"
 created: 2026-06-13
-updated: 2026-06-13T21:20:44Z
+updated: 2026-06-13T21:45:00Z
 ---
 
 # What Changed
@@ -81,7 +81,8 @@ Publish a `story-status-update` back to `grostak-v2:main` so we can flip `saStat
 
 # Applied Notes
 
-- Updated specs/README.md Next Up table (gv2 status for STORY-042/043 now shows v18 tag; STORY-064/073 flagged as App Store / CCPA blockers)
-- Recorded billing model change: patient FREE/PRO subscription gone from gv2 v1.48.1; AI Coach is clinic-tier gated
-- saStatus values unchanged (those are ours to update as we ship)
-- Will publish `story-status-update` back to grostak-v2:main as each story completes
+- Updated specs/README.md Next Up table — commit 238042d (stak-app feat/grostak-v2-migration)
+- gv2 status tags made explicit: STORY-042/043 → FUNCTIONAL (v18), STORY-064/073 → FUNCTIONAL (v29), UC-X01 → FUNCTIONAL (v30), STORY-023/056 → FUNCTIONAL (v32)
+- Billing model change recorded in specs/README.md: patient FREE/PRO subscription gone, AI Coach is clinic-tier (GROWTH+) only
+- saStatus values NOT changed — those update when stak-app ships each story
+- Will publish story-status-update back to grostak-v2:main with commit hash as each story lands
