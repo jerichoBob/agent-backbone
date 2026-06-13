@@ -81,4 +81,7 @@ Publish a `story-status-update` back to `grostak-v2:main` so we can flip `saStat
 
 # Applied Notes
 
-<!-- filled in by receiver via /backbone-complete -->
+- Updated specs/README.md Next Up table (gv2 status for STORY-042/043 now shows v18 tag; STORY-064/073 flagged as App Store / CCPA blockers)
+- Recorded billing model change: patient FREE/PRO subscription gone from gv2 v1.48.1; AI Coach is clinic-tier gated
+- saStatus values unchanged (those are ours to update as we ship)
+- Will publish `story-status-update` back to grostak-v2:main as each story completes
