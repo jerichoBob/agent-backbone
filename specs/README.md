@@ -12,6 +12,7 @@
 | v2 | Agent Presence & Discovery | 18/18 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
+| v5 | Git Transport and Notification | 0/16 | 📝 Draft | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -168,3 +169,43 @@
 - [x] Manual walkthrough with a real dual-repo session (one grostak-v2 + one stak-app agent)
 
 ---
+
+---
+
+## v5: Git Transport and Notification
+
+**Spec**: [spec-v5-git-transport-and-notification.md](spec-v5-git-transport-and-notification.md)
+
+### Phase 1: Git sync wrapper and race-safe claim
+
+- [ ] Write scripts/backbone-sync.sh with pull and push subcommands
+- [ ] Route publish, claim, and complete through it when a remote is configured
+- [ ] Keep local-disk behavior when no remote is configured
+- [ ] Add tests/test-git-transport.sh using two real clones of a local bare repo
+
+### Phase 2: Notification while a session is open or starting
+
+- [ ] Add the SessionStart pending-count hook
+- [ ] Add a Monitor-based poll script and document starting it from /backbone-join
+- [ ] Test the poll is silent with no new messages and fires on a new addressed one
+
+### Phase 3: Notification to a closed session
+
+- [ ] Define the agent-to-human map and where it lives
+- [ ] Add the receiver seen marker written by the session-start hook and the poll
+- [ ] Add the 5-minute no-ack gchat ping to /backbone-publish (sender and title only)
+
+### Phase 4: Safety
+
+- [ ] Add the secret-pattern check to /backbone-publish
+- [ ] Add untrusted-message language to CONVENTIONS.md and the inbox display
+- [ ] Document access control requirements for the remote
+
+### Phase 5: Windows
+
+- [ ] Add a copy fallback to the install script when symlinks are unavailable
+- [ ] Verify the sync wrapper and Monitor poll on a real Windows machine (Git Bash and WSL)
+
+### Phase 6: First live use
+
+- [ ] Use it for a real Bob and Nate exchange and record what no longer had to be relayed
