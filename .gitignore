@@ -1,0 +1,6 @@
+# Live message bus contents are local state, not tooling.
+# Schemas (messages/types/) and the README stay tracked.
+# In transport=git mode, messages are tracked on the backbone branch or shared repo instead (see spec v5).
+messages/*
+!messages/README.md
+!messages/types/
