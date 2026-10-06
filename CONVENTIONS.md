@@ -34,6 +34,41 @@ The sender's spec version numbers are theirs — each project has its own sequen
 
 ---
 
+## Story Status Sync Protocol
+
+When either side ships work on a named story ID, publish a `story-status-update` backbone message to the peer before calling `/backbone-leave`. The receiver applies the update to `apps/web/data/feature-burndown.ts` and calls `/backbone-complete` with the commit hash.
+
+```yaml
+# frontmatter fields required
+type: story-status-update
+routing: direct
+to: grostak-v2:main  # or stak-app:main
+
+stories:
+  - id: STORY-023
+    side: stak-app       # whose status is changing: "gv2" or "stak-app"
+    status: FUNCTIONAL   # FUNCTIONAL | PARTIAL | STUBBED | ABSENT | COMPLETE
+    notes: optional
+```
+
+**Ownership:** `saStatus` and `gv2Status` fields both live in `apps/web/data/feature-burndown.ts` in the **grostak-v2 repo**. stak-app does not own a copy. When stak-app ships a story, it sends a `story-status-update` message; grostak-v2 applies the change to that file, commits, and pushes. The Platform Status Dashboard at `/admin/platform-status` reflects the result.
+
+**Story ID convention:** Each spec should include a `stories:` frontmatter field listing the story IDs it satisfies. The close-out hook reads this to know which stories to report. Example:
+
+```yaml
+stories:
+  - STORY-023
+  - STORY-056
+```
+
+**Rules:**
+
+- Send one message per spec close-out — do not batch across weeks
+- Receiver applies all rows in the message and commits before calling `/backbone-complete`
+- "No action required yet" gv2-side updates are still sent so the dashboard stays accurate
+- The Platform Status Dashboard at `/admin/platform-status` in grostak-v2 is the shared source of truth
+- Until the close-out hook is built, publish `story-status-update` messages manually at spec close-out
+
 ## Message Etiquette
 
 - Always send an ack when you claim a direct message — silence reads as "not received"
