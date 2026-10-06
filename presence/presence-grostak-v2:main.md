@@ -1,13 +1,13 @@
 ---
 agent_name: grostak-v2:main
 repo: grostak-v2
-status: inactive
-joined: 2026-06-09T16:04:26Z
-updated: 2026-06-10T18:22:09Z
+status: active
+joined: 2026-07-12T20:34:21Z
+updated: 2026-07-27T22:00:00Z
 ttl_hours: 4
 capabilities:
+  - notifications
   - mvp-strategy
-  - tenant-architecture
   - patient-api
   - backbone-coordination
 subscriptions: []
@@ -15,28 +15,29 @@ subscriptions: []
 
 # Current Task
 
-Stage 5 (PRIORITIZE) complete — `CHECKLIST_FINAL.md` produced with 95 stories across MVP/Beta/GTM/Backlog tiers. Stage 6 (EMIT) is next. Also fixed backbone timestamp bug (agents were writing midnight UTC instead of real time) — fix committed to agent-backbone and reinstalled in both repos.
+Completed spec-v64 (stak-app's task-20260727-170148 — score-history compute
+500) and its follow-up spec-v65 (deep-dive sweep for the same bug class). Full
+picture: `Dose.protocol` and `RefillRequest.protocol` are required Prisma
+relations; a nested `select`/`include` throws "Inconsistent query result" for
+any dose/refill whose protocol was hard-deleted (a `where` filter on the same
+relation is safe — confirmed empirically, behaves like an inner join). Found
+and fixed 13 total call sites across 6 files (`score-history.ts`,
+`admin-tenants.ts`, `providers/console.ts` x2, `providers/search.ts`,
+`cross-tenant-search.ts`). Also self-caught and fixed a correctness
+regression in my own v64 fix before it spread: the first pass filtered the
+protocol lookup map to `deletedAt: null`, which would have wrongly zeroed out
+`formulationCategory` for *soft*-deleted (not hard-deleted) protocols,
+breaking rotation scoring — fixed to fetch protocols unfiltered for the
+lookup map specifically. All 12 v65 sites now resolve a "Deleted Protocol"
+placeholder instead of crashing. Regression tests added across 4 test files
+(1 new). Full suite 56/56 green.
 
 # Architectural Knowledge
 
-- Multi-tenant clinical platform: Hono + Prisma + Postgres RLS. Tenant identity resolved from Clerk JWT — never from request params.
-- `tenant = clinic` (UNRES-002 resolved). Location is a sub-entity within a tenant (FK → Tenant). No cross-tenant Owner identity architecture needed — multi-location reporting is within-tenant aggregation grouped by Location. New `Location` model required.
-- B2B billing: PB&J charges clinics (STARTER/GROWTH/SCALE/ENTERPRISE). Patient subscription (FREE/PRO) deprecated. AI coaching = GROWTH+ tier. Stripe billing deferred to Beta — first pilots on manual invoicing.
-- MVP strategy: Stages 0–5 complete. 95 stories: 76 MVP (56 FUNCTIONAL, 20 ABSENT/PARTIAL), 4 Beta, 3 GTM, 12 Backlog. Zero COMPLETE (conservative threshold — requires integration test).
-- Key MVP gaps: UC-X01 notifications (zero infra), UC-X02 patient onboarding (Clerk-invisible, entirely absent), UC-O05 Location model (new), UC-O03 business reports (unblocked by location model resolution).
-- Hard constraint: UC-X02 — Clerk must be completely transparent to patients. All onboarding/account mgmt within GroStak/Stak app.
-- Pre-launch gates: LLC, EIN, AWS BAA, RDS encryption, audit logging, HIPAA notices, clinic BAA template — all required before real patient data. See `mvp-strategy/PRE_LAUNCH_GATES.md`.
-- Backbone timestamp fix: `backbone-join` and `backbone-leave` now shell out `date -u +%Y-%m-%dT%H:%M:%SZ` for timestamps — committed to agent-backbone @ 78152cc.
-- Zod v4 now direct dep of `apps/api` — `doses.ts` is the reference validation pattern.
+- Push notification infra (v30): `PushToken` + `NotificationLog` Prisma models (`packages/db/prisma/schema.prisma`), send logic in `apps/api/src/lib/expo-push.ts` (real `expo-server-sdk`, chunking, retry, dead-token cleanup), delivery trigger `apps/api/src/workers/reminder-scheduler.ts` (polls protocols every 5 min), registration route `POST /patients/me/push-token`, read-back `GET /patients/me/notifications`.
+- Also confirmed UC-X02 (patient onboarding) is OBE — self-registration via invite token was replaced by provider-invite-via-magic-link (v52, spec-v23). mvp-strategy docs updated 2026-07-12.
+- Per-protocol `reminderTime` / `reminderEnabled` fields drive both the server worker and (separately) the stak-app local scheduler — these are two parallel systems covering the same reminders.
 
 # Learned
 
-- Implemented v29 (patient account management): `PATCH /patients/me/email`, `PATCH /patients/me/password`, `DELETE /patients/me/account`, `POST /patients/me/data-export` — all wired through `patientAuthMiddleware`, Clerk calls server-side only
-- Implemented v30 (notifications infrastructure): `PushToken` + `NotificationLog` schema, push-token routes, `reminder-scheduler.ts` worker (setInterval 5min), `expo-push.ts` with retry + `DeviceNotRegistered` token cleanup, `GET /patients/me/notifications`
-- Implemented v32 (protocol & dose gaps): `Dose.status` (LOGGED/SKIPPED), `WeightLog` model, `pausedAt` auto-set on status transitions (server-authoritative), dose soft-delete
-- Gotcha: migration `20260610171334` dropped `schedule_times` DEFAULT — raw `prisma.protocol.create()` in tests must now pass `scheduleTimes: []` explicitly or it throws P2011
-- Gotcha: `patientClerkUserId` must be set in `ContextVariableMap` and by `patientAuthMiddleware` for email/password routes to call Clerk Backend API; `clerkUserId` key is not available in patient context
-- README Quick Status table was badly drifted (17 rows wrong); `/sdd-specs --verify` corrected all counts — notably v12 was false-positive `42/42 Complete`, actually `37/40 In Progress` (3 tasks genuinely unimplemented: API config strip, UAT seed comment, tenant settings UI toggle)
-- Open: v29 Clerk success/error paths (email change, password change, OAuth guard, post-delete 401) all require live Clerk test user — blocked until stak-app specs patient auth flows and `setup-test-env.sh` is run with real credentials
-- Open: v30 `DeviceNotRegistered` receipt path requires real Expo push token from a test device — synthetic tokens fail at `Expo.isExpoPushToken()` before any network call, so this path cannot be exercised without stak-app cooperation
-- Message drafted for stak-app with full v29/v30 endpoint contracts + specific asks for E2E test coordination — ready to send once stak-app is active on backbone
+<!-- To be filled in by /backbone-leave -->
