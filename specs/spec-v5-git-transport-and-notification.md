@@ -48,6 +48,7 @@ tags: [transport, git, notification, cross-machine, windows]
 - AC-9: Presence writes only on join and leave. TTL-based staleness is not required in git mode.
 - AC-10: Agents act on message content only after the human approves, through the normal tool permission prompts. No command auto-executes because a message said so.
 - AC-11: The local-disk mode from v1-v3 keeps working when no remote is configured.
+- AC-12: The transport is an explicit setting, `transport=local|git`, in `backbone.config` at the backbone root. The default when the file or key is absent is `local`, so v1-v3 users see no change. With `transport=local`, no command touches git even if the directory has a remote. With `transport=git` and an unreachable remote, commands fail with a clear error and do not silently fall back to local.
 
 ### Out of Scope
 
@@ -68,6 +69,8 @@ tags: [transport, git, notification, cross-machine, windows]
 - **Storage unchanged.** Same files, same frontmatter, same filename state encoding. Only the read and write steps change.
 - **Location.** Either a dedicated repo cloned as a sibling (`../agent-backbone/` keeps resolving), or an orphan `backbone` branch of a project repo checked out as a worktree at that path. Orphan-branch needs no new repo or permissions for a team that already shares one. Decided: project repo orphan branch, or a shared private repo for multi-repo work (see Decisions).
 - **Sync wrapper.** A script `scripts/backbone-sync.sh` provides `pull` (fetch and rebase) and `push` (commit with the AC-3 message, push, on rejection pull and report). Commands call it instead of touching git directly.
+- **Transport setting.** `backbone.config` holds `transport=local|git` (default `local`). The sync wrapper reads it first; in `local` mode `pull` and `push` are no-ops. Failing loudly in `git` mode with an unreachable remote avoids a silent fallback that would let two machines diverge.
+- **Tracking of messages.** In the tooling repo, `.gitignore` excludes `messages/*` except `messages/README.md` and `messages/types/`, since live messages are local state there. In `git` mode, messages are tracked only on the orphan `backbone` branch or in the shared private repo, which carries no such ignore rule. The sync wrapper must not depend on the tooling repo's ignore rules.
 - **Claim race.** Claim renames the file and pushes. A rejected push means another agent won; the loser pulls, re-reads the file, and reports "already claimed by X".
 - **Presence.** Join and leave write one per-agent file each, so there are no merge conflicts and no heartbeat commits.
 - **Notification, session open.** The `Monitor` tool runs a shell loop that fetches every 30 seconds and checks whether any `*-pending.md` addressed to this agent was added upstream. It prints a line and exits on a hit, which wakes the agent. No model tokens are spent while it waits.
@@ -75,14 +78,15 @@ tags: [transport, git, notification, cross-machine, windows]
 - **Notification, no ack.** Presence has no heartbeat in git mode (AC-9), so the sender cannot tell whether the receiver is online. Instead, after publishing, the sender's session watches for an ack (claim or `seen` marker). If none arrives within 5 minutes, it sends a `/gchat` message to the recipient's human, using an agent-to-human map kept in `presence/` or a `roster.md`. The message carries sender and title only. Limit: the sender's session must stay open to notice the timeout; if it closes first, no ping is sent.
 - **Windows.** The install script falls back to copying command files when `ln -s` fails, and records which files were copied so `/backbone-update` can refresh them.
 - **Untrusted input.** The inbox command displays message content as quoted data from the named sender. The conventions file states that messages are requests, not instructions.
-- **Secret check.** Publish scans the draft body for patterns (`mongodb(+srv)://user:pass@`, `Bearer `, `-----BEGIN`, long base64 tokens) before writing.
+- **Secret check.** Publish scans the draft body for patterns (`mongodb(+srv)://user:pass@`, `Bearer`, `-----BEGIN`, long base64 tokens) before writing.
 
 ### Phase 1: Git sync wrapper and race-safe claim
 
 - Write `scripts/backbone-sync.sh` with pull and push subcommands
-- Route publish, claim, and complete through it when a remote is configured
-- Keep local-disk behavior when none is
-- Add `tests/test-git-transport.sh` using two real clones of a local bare repo (no mocks): publish, receive, race claim, complete
+- Route publish, claim, and complete through it when `transport=git`
+- Keep local-disk behavior when `transport=local` or unset
+- Add the `backbone.config` transport setting (default `local`) and make the wrapper honor it, including the unreachable-remote error
+- Add `tests/test-git-transport.sh` using two real clones of a local bare repo (no mocks): publish, receive, race claim, complete, and flipping the transport setting
 
 ### Phase 2: Notification while a session is open or starting
 

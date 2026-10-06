@@ -12,7 +12,7 @@
 | v2 | Agent Presence & Discovery | 18/18 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
-| v5 | Git Transport and Notification | 0/16 | 📝 Draft | <robert.w.seaton.jr@gmail.com> |
+| v5 | Git Transport and Notification | 0/17 | 📝 Draft | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -179,9 +179,10 @@
 ### Phase 1: Git sync wrapper and race-safe claim
 
 - [ ] Write scripts/backbone-sync.sh with pull and push subcommands
-- [ ] Route publish, claim, and complete through it when a remote is configured
-- [ ] Keep local-disk behavior when no remote is configured
-- [ ] Add tests/test-git-transport.sh using two real clones of a local bare repo
+- [ ] Route publish, claim, and complete through it when transport=git
+- [ ] Keep local-disk behavior when transport=local or unset
+- [ ] Add the backbone.config transport setting (default local) and make the wrapper honor it, including the unreachable-remote error
+- [ ] Add tests/test-git-transport.sh using two real clones of a local bare repo, including flipping the transport setting
 
 ### Phase 2: Notification while a session is open or starting
 
