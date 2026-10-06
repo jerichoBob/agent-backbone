@@ -210,9 +210,16 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.1.0
+0.1.1
 
 ### Release Notes
+
+#### v0.1.1 (2026-10-06) — author: robert.w.seaton.jr@gmail.com
+
+- docs: add story status sync protocol and message type [`d84de76`]
+- specs: add v5 transport setting and message tracking rule [`e8735f8`]
+- chore: stop tracking live messages [`3f55085`]
+- chore: sync presence records [`d8a9912`]
 
 #### v0.1.0 (2026-06-06)
 
