@@ -210,9 +210,13 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.1.1
+0.1.2
 
 ### Release Notes
+
+#### v0.1.2 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
+
+- chore: untrack local messages [`ac6207b`]
 
 #### v0.1.1 (2026-10-06) — author: robert.w.seaton.jr@gmail.com
 
