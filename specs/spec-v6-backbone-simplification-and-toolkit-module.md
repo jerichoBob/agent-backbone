@@ -52,7 +52,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 - AC-6: No file the backbone creates has a name containing `: / \ * ? " < > |`. Agent names are stored in file contents, and lookup never depends on the filename.
 - AC-7: Existing presence files migrate with one command that supports a dry run, preserves git history, and is safe to run twice.
 - AC-8: Given a configured agent name, when a session starts, then presence is registered without any command, the pending count is the first output line, and the agent is told to start the watcher. When the session ends, presence is marked inactive. A failing hook never blocks the session.
-- AC-9: The user-facing commands are `/backbone-setup`, `/backbone-send`, `/backbone-inbox`, `/backbone-done` and `/backbone` (status, join, leave, subscribe, unsubscribe, name, update). The nine old names keep working as aliases that forward and print a deprecation note, until the cleanup phase removes them.
+- AC-9: The user-facing commands are `/backbone-setup`, `/backbone-send`, `/backbone-inbox`, `/backbone-done` and `/backbone` (status, join, leave, subscribe, unsubscribe, name, update). The old names are not ported to the toolkit module (amended 2026-10-08 at Bob's direction: simplest possible set).
 - AC-10: Every script path named in a command file exists in the repo, checked by a test.
 - AC-11: `tests/test-git-transport.sh` passes under Git Bash and WSL on a real Windows machine, and the result is recorded.
 - AC-12: One real Bob and Nate exchange runs over git, and what no longer had to be relayed is recorded.
@@ -191,6 +191,17 @@ Recorded before any change to the toolkit, as the spec requires. Source: `~/pgh/
 
 Tooling moves; state and specs stay. In `modules/backbone/` go: `scripts/` (every `backbone-*.sh`, the installer, the lib), `skills/` (the four commands plus the alias files while they exist, and the merged setup skill), and `templates/` (the starter `backbone.config`, `roster.md`, and hook settings snippet). In agent-backbone stay: `specs/`, `CONVENTIONS.md`, `messages/types/` and `messages/README.md` (the protocol, not the tooling), and the reference deployment's `messages/`, `presence/` and `roster.md` state. agent-backbone remains a repo (Open Question 4). Scripts find their state through `--dir`/`BACKBONE_DIR`, never through their own location, so the move needs no change to how state is addressed.
 
+### Migration notes (2026-10-08)
+
+- **Not ported:** `install-backbone-commands.sh`. The toolkit's `install.sh` (explicit `BACKBONE_SKILLS` list, copy loop, chmod loop, stale-skill cleanup aware of the list) replaces it, so `--link`, the copy manifest and `.backbone-copied` are gone rather than ported.
+- **Hook commands** now name the module by `~` path (`bash ~/.claude/aidev-toolkit/modules/backbone/scripts/...`), so one `settings.json` works on every machine. `backbone-install-hooks.sh --scripts-dir` overrides it for tests.
+- **Test split.** Tooling tests moved to the toolkit as `tests/test-backbone-{git-transport,presence,commands}.sh`, derived by `.claude/scripts/port-tests-to-toolkit.py` from agent-backbone's git history. Tests about this repo's own content (protocol docs, ignore rules, presence example, message and workflow checks) stay; they find the module through `tests/module-path.sh` and report BLOCKED when it is absent.
+- **Rehearsal finding.** The sender is not told when the receiver completes a message (see `docs/live-exchange.md`). Candidate fix, not built: `/backbone-done` publishes a short reply addressed to the original `from`.
+- **Found by the e2e check.** The reference deployment's presence files still had colons; the migration was built but had not been run here. Run on 2026-10-08.
+- **Branches.** Toolkit work is on local branch `feat/backbone-module` (unpushed, uncommitted). The cutover is on local branch `feat/backbone-module-cutover` in this repo so `main` keeps the working layout until the toolkit PR is merged and `/aid-update` has run.
+
+- **Aliases dropped (2026-10-08, Bob).** Only the five skills are ported; the eight forwarding aliases were removed from the module, the installer list, `aid-help` and the tests. Open Question 3 and Phase 7's alias removal are moot. A project still typing an old name gets "command not found".
+
 ### Dependencies
 
 - Write access to `~/pgh/aidev-toolkit` (a branch and PR).
@@ -253,3 +264,5 @@ Tooling moves; state and specs stay. In `modules/backbone/` go: `scripts/` (ever
 | 2026-10-08 | Phases 1-4 implemented; toolkit survey and module boundary recorded; Phase 5 runbooks written; Phases 5-7 blocked on external work |
 | 2026-10-08 | Add two pre-migration validation tasks to Phase 4: a local rehearsal of the Bob and Nate exchange, and an end-to-end check in a real session |
 | 2026-10-08 | Reorder at Bob's direction: migration into the toolkit is now Phase 5; the Windows runs (Phase 6) wait for it. Non-Windows testing is not deferred. Removed a mistaken toolkit-path discrepancy note (`pgh` is a symlink) |
+| 2026-10-08 | Phase 5 implemented on local branches except the PR (waits for the developer); rehearsal and scripted e2e done; real-session e2e, Windows runs and the live exchange remain |
+| 2026-10-08 | Drop the eight deprecated aliases from the module at Bob's direction; only the five skills ship |

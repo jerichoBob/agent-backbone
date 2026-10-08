@@ -13,7 +13,7 @@
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
 | v5 | Git Transport and Notification | 14/17 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
-| v6 | Backbone Simplification and Toolkit Module | 25/40 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v6 | Backbone Simplification and Toolkit Module | 32/40 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -250,19 +250,19 @@
 - [x] Turn the nine old command files into forwarding aliases with a deprecation note (eight aliases: `/backbone-inbox` keeps its name, so it is updated rather than aliased)
 - [x] Update the installer, README, CONVENTIONS.md, CLAUDE.md and every test that names a command
 - [x] Add a test that every script path referenced by a command file exists, and that each alias forwards
-- [ ] Rehearse the Bob and Nate exchange on this machine with two clones and two sessions, and record what had to be relayed by hand in `docs/live-exchange.md` (rehearsal section) — NEXT
-- [ ] Run the hook installer and the `/backbone` commands end to end in a scratch project inside a real Claude Code session (scratch `HOME` for anything global), and record the result in `docs/e2e-check.md` — NEXT, after the rehearsal
+- [x] Rehearse the Bob and Nate exchange on this machine with two clones and two sessions, and record what had to be relayed by hand in `docs/live-exchange.md` (rehearsal section) — script: `.claude/scripts/rehearse-live-exchange.sh`; passed, one finding (sender is not told when the receiver completes)
+- [ ] Run the hook installer and the `/backbone` commands end to end in a scratch project inside a real Claude Code session (scratch `HOME` for anything global), and record the result in `docs/e2e-check.md` — PARTLY DONE: scripted half passed (`.claude/scripts/e2e-check-hooks.sh`, results in `docs/e2e-check.md`); the real-session half needs a human-run Claude Code session. BLOCKED on that. Also ran the presence migration on this repo's 3 colon-named files (staged, uncommitted)
 
 ### Phase 5: Migrate into aidev-toolkit
 
 - [x] Survey aidev-toolkit (`modules/sdd` layout, installer, absolute-path convention, test location) and record findings in Technical Notes before changing anything
 - [x] Record the module boundary decision: tooling moves, state and specs stay
-- [ ] On a branch of aidev-toolkit, create `modules/backbone/{scripts,skills,templates}` and port the scripts with module-path resolution — NEXT: not blocked. Work happens on a branch in `~/pgh/aidev-toolkit` (same directory as `~/Play/github_repos/aidev-toolkit`)
-- [ ] Merge the toolkit's existing `backbone-setup` skill into the new setup flow — BLOCKED on the toolkit branch above; note it must install `backbone.md` too (it globs `backbone-*.md` only)
-- [ ] Port the tests into the toolkit's layout and run both repos' suites — BLOCKED on the toolkit branch above
-- [ ] Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude` — BLOCKED on the toolkit branch above
-- [ ] Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module — BLOCKED on the toolkit module existing
-- [ ] Write a rollback note and open the toolkit PR for the developer to review and merge — BLOCKED on the work above; opening a PR is outward-facing, so it waits for the developer
+- [x] On a branch of aidev-toolkit, create `modules/backbone/{scripts,skills,templates}` and port the scripts with module-path resolution — branch `feat/backbone-module` in `~/pgh/aidev-toolkit` (uncommitted, nothing pushed). 13 scripts ported with two changes: `backbone-sync.sh`/`bb_default_dir` find state through `BACKBONE_DIR` or `../agent-backbone`, never their own location; `backbone-install-hooks.sh` writes `~/.claude/aidev-toolkit/modules/backbone/scripts/...` into hook commands (`--scripts-dir` overrides). `install-backbone-commands.sh` was not ported: the toolkit installer replaces it
+- [x] Merge the toolkit's existing `backbone-setup` skill into the new setup flow — moved with `git mv` into `modules/backbone/skills/`; it now checks the module and offers hooks instead of copying files, and `install.sh` installs `backbone.md` too (explicit `BACKBONE_SKILLS` list)
+- [x] Port the tests into the toolkit's layout and run both repos' suites — toolkit `tests/test-backbone-{git-transport 226, presence 57, commands 77}.sh` (derived by `.claude/scripts/port-tests-to-toolkit.py`, re-runnable); toolkit `tests/run-all.sh` 10/10; agent-backbone workflow 38, message-bus 46, presence docs 12, repo-docs 15. No failures
+- [x] Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude` — `install.sh` gains `BACKBONE_SKILLS`, stale-cleanup awareness and a chmod loop; VERSION and README bumped to 0.101.0 with release notes; `test-backbone-commands.sh` §7 plus the toolkit's `test-installer-copies`, `test-clean-install`, `test-install`, `test-uninstall` all run the installer in a scratch `HOME`; real `~/.claude/commands/backbone.md` confirmed absent afterwards
+- [x] Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module — on local branch `feat/backbone-module-cutover` (uncommitted; `main` still has the old layout so existing sessions keep working until the toolkit PR is merged and installed). Removed `scripts/`, `.claude/commands/backbone*.md`, `test-git-transport.sh`, `test-commands.sh`; added `tests/module-path.sh` (BLOCKED, not faked, when the module is missing) and `tests/test-repo-docs.sh`; README, CLAUDE.md and docs updated
+- [ ] Write a rollback note and open the toolkit PR for the developer to review and merge — PARTLY DONE: rollback note written (`modules/backbone/README.md` in the toolkit). Opening the PR is outward-facing and waits for the developer; both branches are local only
 
 ### Phase 6: Live validation (Windows runs only after the migration)
 
@@ -273,7 +273,7 @@
 
 ### Phase 7: Cleanup and release (last)
 
-- [ ] Remove the deprecated aliases in the next minor release after they ship (one release, per Open Question 3) — BLOCKED until the release after the one that ships the aliases (0.5.0); remove in 0.6.0
+- [x] Remove the deprecated aliases — not needed: at Bob's direction (2026-10-08) the eight old names were never ported to the toolkit module; only `/backbone`, `/backbone-send`, `/backbone-inbox`, `/backbone-done` and `/backbone-setup` ship
 - [ ] Remove leftover scratch files (asking first) and fix any stale counts in docs — PARTLY DONE: doc counts and command names were fixed in Phase 4; scratch-file removal needs your yes first (candidates: v5's `/tmp` files and any `.claude/data` scratch), so nothing was deleted
 - [ ] Final documentation pass, version bump, and mark v5 and v6 complete — BLOCKED: v5 and v6 each still have open external tasks, so neither can be marked complete; version bumped to 0.5.0 for the work done so far
 
