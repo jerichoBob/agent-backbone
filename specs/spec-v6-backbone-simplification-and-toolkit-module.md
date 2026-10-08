@@ -45,6 +45,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 
 - AC-1: Given `notify_command` is set and `notify_confirm=auto`, when a direct message has no ack within the timeout, then the command runs once with the target, sender, title and id supplied as environment variables, and the message body is never passed.
 - AC-2: Given `notify_confirm=ask` (the default), when the timeout passes, then nothing is sent until the sender's session shows the exact target and text and the developer approves.
+- AC-2a: Given `notify_confirm` set in `backbone.config` as a machine default and `notify_confirm.<project>=` as a per-project override, when a ping is due, then the override for that project wins, else the machine default, else `ask`. Overrides are read only from the machine-local `backbone.config`, never from a file in a project repo.
 - AC-3: Given a title containing quotes, `$(...)`, backticks or newlines, when a ping is sent, then the command receives the text unchanged and nothing in it is executed.
 - AC-4: Given no `notify_command`, when the timeout passes, then the sender is told there is no notifier configured and nothing is attempted.
 - AC-5: The roster's last column is an opaque notify target (for Radeas, a Chat space ID), not an email.
@@ -74,7 +75,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 ### Design
 
 - **Notifier contract.** `backbone.config` gains `notify_command=` and `notify_confirm=ask|auto` (default `ask`). A new `backbone-notify.sh` runs the command with `BACKBONE_NOTIFY_TARGET`, `BACKBONE_NOTIFY_TEXT`, `BACKBONE_NOTIFY_FROM`, `BACKBONE_NOTIFY_TITLE` and `BACKBONE_NOTIFY_ID` in the environment. Text is never interpolated into a shell string. Exit 0 means sent.
-- **Confirmation.** In `auto`, `backbone-ack-check.sh` calls the notifier itself on timeout. In `ask`, it prints a `PING` line, the sender's session shows the target and text, and runs `backbone-notify.sh` only after approval. This implements v5's "automatic" decision as an opt-in per project, and leaves projects such as Radeas free to keep `ask`. **Proposed, not yet confirmed by Bob (Open Question 1).**
+- **Confirmation.** In `auto`, `backbone-ack-check.sh` calls the notifier itself on timeout. In `ask`, it prints a `PING` line, the sender's session shows the target and text, and runs `backbone-notify.sh` only after approval. This implements v5's "automatic" decision as an opt-in, and leaves projects such as Radeas free to keep `ask`. **Setting resolution:** `notify_confirm=` in `backbone.config` is the machine default; `notify_confirm.<project>=` overrides it for one project (project key is the repo name, matching the `<repo>` in `<repo>:main`). Order: project override, then machine default, then `ask`. Overrides live only in the machine-local config because a file inside a project repo could be changed by anyone with push access to that repo, which would let a teammate switch your machine to `auto`. **Confirmed by Bob (Open Question 1).**
 - **Roster.** The last column is renamed `notify` and holds whatever the notifier needs.
 - **Filenames.** Presence files are named from a filesystem-safe form of the agent name (`:` becomes `__`). `agent_name` in the frontmatter stays authoritative and readers scan it. Seen markers use the same function. A migration script renames existing files.
 - **Hooks.** SessionStart registers presence from the configured agent name (`agent=` or `BACKBONE_AGENT`, default `<repo>:main`), prints the count first, and adds a line telling the agent to start the poll under Monitor (a hook cannot start Monitor itself). SessionEnd marks presence inactive. Neither writes the "Learned" section.
@@ -86,11 +87,12 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 
 - Add `scripts/backbone-notify.sh` implementing the notifier contract without shell interpolation of message text
 - Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
+- Add per-project override resolution (`notify_confirm.<project>=`, then machine default, then `ask`) in `backbone-lib.sh`, read only from the machine-local `backbone.config`
 - Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
 - Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
 - Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`
 - Log each ping attempt (target, id, result, never the body) under `.claude/data/backbone/`
-- Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, notifier failure, and no body in any output
+- Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, override precedence, notifier failure, and no body in any output
 
 ### Phase 2: Windows-safe filenames
 
@@ -192,11 +194,12 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 
 ## Open Questions
 
-1. **Confirmation default (needs Bob):** is `notify_confirm=ask` as the default, with `auto` opt-in per project, acceptable as the way to reconcile v5's "automatic" decision with the Radeas confirmation rule?
+1. ~~**Confirmation default**~~ **Settled (Bob, 2026-10-07):** `notify_confirm=ask` is the default; `auto` is opt-in through a machine default in `backbone.config` with a per-project override (`notify_confirm.<project>=`).
 2. When `agent=` is not configured, is `<repo>:main` an acceptable automatic name, or should the hook refuse to register?
 3. How long should the old command aliases live (one release, or until every project is updated)?
 4. After the migration does agent-backbone remain a repo (specs, conventions, reference state), or fold into the toolkit?
 5. Does the Windows verification use Nate's machine, and when?
+6. **Sender authenticity (deferred, low priority):** `from:` is plain text and is not verified. The group is small (Bob, Nate, Bruno, possibly more) and the remote is a private repo, so the goal is consistency, not defence against a hostile member or a compromised account. Git history is the source of truth when someone needs to know who sent a message. Revisit if the group grows, write access reaches people outside it, or the remote becomes public. Options if it is ever needed, cheapest first: (a) show the pushing account beside `from:` in `/backbone-inbox`; (b) branch protection with no force pushes; (c) signed commits; (d) per-message signatures or encryption. Message encryption and signatures stay out of scope for v6.
 
 ---
 
@@ -205,3 +208,5 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 | Date       | Change        |
 | ---------- | ------------- |
 | 2026-10-07 | Initial draft |
+| 2026-10-07 | Add Open Question 6 (sender authenticity) |
+| 2026-10-07 | Settle Q1: `ask` default, machine default plus per-project override (AC-2a) |

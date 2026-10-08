@@ -13,7 +13,7 @@
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
 | v5 | Git Transport and Notification | 14/17 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
-| v6 | Backbone Simplification and Toolkit Module | 0/37 | ✏️ Draft | <robert.w.seaton.jr@gmail.com> |
+| v6 | Backbone Simplification and Toolkit Module | 0/38 | ✏️ Draft | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -220,11 +220,12 @@
 
 - [ ] Add `scripts/backbone-notify.sh` implementing the notifier contract without shell interpolation of message text
 - [ ] Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
+- [ ] Add per-project override resolution (`notify_confirm.<project>=`, then machine default, then `ask`) in `backbone-lib.sh`, read only from the machine-local `backbone.config`
 - [ ] Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
 - [ ] Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
 - [ ] Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`
 - [ ] Log each ping attempt (target, id, result, never the body) under `.claude/data/backbone/`
-- [ ] Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, notifier failure, and no body in any output
+- [ ] Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, override precedence, notifier failure, and no body in any output
 
 ### Phase 2: Windows-safe filenames
 
