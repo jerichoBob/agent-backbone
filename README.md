@@ -216,9 +216,15 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.3.0
+0.4.0
 
 ### Release Notes
+
+#### v0.4.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
+
+- feat: add notify_confirm resolution with per-project override [`cfb899a`]
+- docs: add v6 Q7 on Google Chat as a message bus [`da3528c`]
+- docs: add participant-verification options to v6 Q7 [`5c2eba8`]
 
 #### v0.3.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
 
