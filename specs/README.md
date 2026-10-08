@@ -13,7 +13,7 @@
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
 | v5 | Git Transport and Notification | 14/17 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
-| v6 | Backbone Simplification and Toolkit Module | 3/38 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v6 | Backbone Simplification and Toolkit Module | 25/40 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -221,58 +221,60 @@
 - [x] Add `scripts/backbone-notify.sh` implementing the notifier contract without shell interpolation of message text
 - [x] Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
 - [x] Add per-project override resolution (`notify_confirm.<project>=`, then machine default, then `ask`) in `backbone-lib.sh`, read only from the machine-local `backbone.config`
-- [ ] Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
-- [ ] Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
-- [ ] Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`
-- [ ] Log each ping attempt (target, id, result, never the body) under `.claude/data/backbone/`
-- [ ] Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, override precedence, notifier failure, and no body in any output
+- [x] Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
+- [x] Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
+- [x] Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`
+- [x] Log each ping attempt (target, id, result, never the body) under `.claude/data/backbone/`
+- [x] Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, override precedence, notifier failure, and no body in any output
 
 ### Phase 2: Windows-safe filenames
 
-- [ ] Define the safe filename function once in `backbone-lib.sh` and use it for presence and seen markers
-- [ ] Make presence lookups scan `agent_name` instead of building a filename (lib plus the join, leave, roster, subscribe and inbox commands)
-- [ ] Add `scripts/backbone-migrate-presence.sh` with dry run, history-preserving renames, and idempotence
-- [ ] Update the presence-lifecycle and git-transport tests for the new names and add a migration test
+- [x] Define the safe filename function once in `backbone-lib.sh` and use it for presence and seen markers
+- [x] Make presence lookups scan `agent_name` instead of building a filename (lib plus the join, leave, roster, subscribe and inbox commands); the safe-name function allows `~`, and an address (`<repo>:<user>`) resolves to all of its session records (`<address>~<suffix>`)
+- [x] Add `scripts/backbone-migrate-presence.sh` with dry run, history-preserving renames, and idempotence
+- [x] Update the presence-lifecycle and git-transport tests for the new names and add a migration test
 
 ### Phase 3: Session hooks
 
-- [ ] Extend `backbone-session-start.sh` to register presence, keep the count first, and tell the agent to start the watcher
-- [ ] Add `backbone-session-end.sh` that marks presence inactive and pushes in git mode
-- [ ] Add the hook configuration for both, merged non-destructively into a project's `settings.json`, installed only with the developer's consent
-- [ ] Add tests: first join, idempotent re-join, end marks inactive, hooks exit 0 on any failure, count remains the first line
+- [x] Extend `backbone-session-start.sh` to register presence, keep the count first, and tell the agent to start the watcher; address is `agent=`/`BACKBONE_AGENT` else `<repo>:<git user slug>` (noted as inferred, refuse if no git user), and each session registers as `<address>~<4-char random>`
+- [x] Add `backbone-session-end.sh` that marks presence inactive and pushes in git mode
+- [x] Add the hook configuration for both, merged non-destructively into a project's `settings.json`, installed only with the developer's consent
+- [x] Add tests: first join, idempotent re-join, end marks inactive, hooks exit 0 on any failure, count remains the first line
 
 ### Phase 4: Collapse the commands
 
-- [ ] Write `/backbone` with `status`, `join`, `leave`, `subscribe`, `unsubscribe`, `name` and `update`
-- [ ] Write `/backbone-send` combining publish, secret check and ack timer, keeping the intent question
-- [ ] Write `/backbone-done` replacing complete
-- [ ] Update `/backbone-inbox` for the new scripts and keep the untrusted-message display
-- [ ] Turn the nine old command files into forwarding aliases with a deprecation note
-- [ ] Update the installer, README, CONVENTIONS.md, CLAUDE.md and every test that names a command
-- [ ] Add a test that every script path referenced by a command file exists, and that each alias forwards
+- [x] Write `/backbone` with `status`, `join`, `leave`, `subscribe`, `unsubscribe`, `name` and `update`
+- [x] Write `/backbone-send` combining publish, secret check and ack timer, keeping the intent question
+- [x] Write `/backbone-done` replacing complete
+- [x] Update `/backbone-inbox` for the new scripts and keep the untrusted-message display
+- [x] Turn the nine old command files into forwarding aliases with a deprecation note (eight aliases: `/backbone-inbox` keeps its name, so it is updated rather than aliased)
+- [x] Update the installer, README, CONVENTIONS.md, CLAUDE.md and every test that names a command
+- [x] Add a test that every script path referenced by a command file exists, and that each alias forwards
+- [ ] Rehearse the Bob and Nate exchange on this machine with two clones and two sessions, and record what had to be relayed by hand in `docs/live-exchange.md` (rehearsal section) — NEXT
+- [ ] Run the hook installer and the `/backbone` commands end to end in a scratch project inside a real Claude Code session (scratch `HOME` for anything global), and record the result in `docs/e2e-check.md` — NEXT, after the rehearsal
 
-### Phase 5: Live validation (external)
+### Phase 5: Migrate into aidev-toolkit
 
-- [ ] Run `tests/test-git-transport.sh` under Git Bash and WSL on a real Windows machine and record the result in `docs/windows-verification.md`
-- [ ] Verify the poll, hooks and install on Windows, including that no colon filenames remain
-- [ ] Run a real Bob and Nate exchange over git and record what no longer had to be relayed in `docs/live-exchange.md`
-- [ ] Fix what the above turns up, then close the three open v5 tasks in `specs/README.md`
+- [x] Survey aidev-toolkit (`modules/sdd` layout, installer, absolute-path convention, test location) and record findings in Technical Notes before changing anything
+- [x] Record the module boundary decision: tooling moves, state and specs stay
+- [ ] On a branch of aidev-toolkit, create `modules/backbone/{scripts,skills,templates}` and port the scripts with module-path resolution — NEXT: not blocked. Work happens on a branch in `~/pgh/aidev-toolkit` (same directory as `~/Play/github_repos/aidev-toolkit`)
+- [ ] Merge the toolkit's existing `backbone-setup` skill into the new setup flow — BLOCKED on the toolkit branch above; note it must install `backbone.md` too (it globs `backbone-*.md` only)
+- [ ] Port the tests into the toolkit's layout and run both repos' suites — BLOCKED on the toolkit branch above
+- [ ] Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude` — BLOCKED on the toolkit branch above
+- [ ] Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module — BLOCKED on the toolkit module existing
+- [ ] Write a rollback note and open the toolkit PR for the developer to review and merge — BLOCKED on the work above; opening a PR is outward-facing, so it waits for the developer
 
-### Phase 6: Migrate into aidev-toolkit (next to last)
+### Phase 6: Live validation (Windows runs only after the migration)
 
-- [ ] Survey aidev-toolkit (`modules/sdd` layout, installer, absolute-path convention, test location) and record findings in Technical Notes before changing anything
-- [ ] Record the module boundary decision: tooling moves, state and specs stay
-- [ ] On a branch of aidev-toolkit, create `modules/backbone/{scripts,skills,templates}` and port the scripts with module-path resolution
-- [ ] Merge the toolkit's existing `backbone-setup` skill into the new setup flow
-- [ ] Port the tests into the toolkit's layout and run both repos' suites
-- [ ] Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude`
-- [ ] Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module
-- [ ] Write a rollback note and open the toolkit PR for the developer to review and merge
+- [ ] Run `tests/test-git-transport.sh` under Git Bash and WSL on a real Windows machine and record the result in `docs/windows-verification.md` — BLOCKED until the migration is done (Windows testing now runs against the toolkit module): needs a real Windows machine (Nate's or Bob's laptop); runbook and empty results table are ready in that file
+- [ ] Verify the poll, hooks and install on Windows, including that no colon filenames remain — BLOCKED until the migration is done: same Windows machine; steps are in `docs/windows-verification.md`
+- [ ] Run a real Bob and Nate exchange over git and record what no longer had to be relayed in `docs/live-exchange.md` — NOT BLOCKED by the migration: needs Nate (or a second session on a second clone here) to run it; can happen before or after Phase 5. Script and empty record are ready in that file
+- [ ] Fix what the above turns up, then close the three open v5 tasks in `specs/README.md` — BLOCKED on the three tasks above
 
 ### Phase 7: Cleanup and release (last)
 
-- [ ] Remove the deprecated aliases once every installed project has run the update
-- [ ] Remove leftover scratch files (asking first) and fix any stale counts in docs
-- [ ] Final documentation pass, version bump, and mark v5 and v6 complete
+- [ ] Remove the deprecated aliases in the next minor release after they ship (one release, per Open Question 3) — BLOCKED until the release after the one that ships the aliases (0.5.0); remove in 0.6.0
+- [ ] Remove leftover scratch files (asking first) and fix any stale counts in docs — PARTLY DONE: doc counts and command names were fixed in Phase 4; scratch-file removal needs your yes first (candidates: v5's `/tmp` files and any `.claude/data` scratch), so nothing was deleted
+- [ ] Final documentation pass, version bump, and mark v5 and v6 complete — BLOCKED: v5 and v6 each still have open external tasks, so neither can be marked complete; version bumped to 0.5.0 for the work done so far
 
 ---

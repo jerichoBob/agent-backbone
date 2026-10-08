@@ -2,7 +2,7 @@
 version: 6
 name: backbone-simplification-and-toolkit-module
 display_name: "Backbone Simplification and Toolkit Module"
-status: draft
+status: in-progress
 created: 2026-10-07
 creator: robert.w.seaton.jr@gmail.com
 owner: robert.w.seaton.jr@gmail.com
@@ -81,7 +81,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 - **Hooks.** SessionStart registers presence from the configured agent name (`agent=` or `BACKBONE_AGENT`, default `<repo>:main`), prints the count first, and adds a line telling the agent to start the poll under Monitor (a hook cannot start Monitor itself). SessionEnd marks presence inactive. Neither writes the "Learned" section.
 - **Commands.** `/backbone-send` absorbs publish, the secret check and the ack timer. `/backbone-done` replaces complete. `/backbone-inbox` keeps its name. `/backbone` takes subcommands for the rest. Old names become thin aliases.
 - **Module.** Tooling moves to `~/pgh/aidev-toolkit/modules/backbone/{scripts,skills,templates}` and is called by absolute path under `~/.claude/aidev-toolkit/modules/backbone/`. The toolkit's existing `backbone-setup` skill is merged into the new setup flow. agent-backbone keeps the specs, conventions, message types, and the reference deployment's state.
-- **Ordering.** Behavior changes first, validated live, then the move, then cleanup. Moving a design that has not been used would move its bugs too.
+- **Ordering.** Behavior changes first, then the move into the toolkit, then live validation (Windows, per Bob) against the installed module. Everything that can be tested on macOS is tested before the move; only the Windows runs wait for it. The Bob and Nate exchange can run at any point, then cleanup. Revised 2026-10-08 at Bob's direction: the live runs should exercise what will actually ship, the toolkit module, not the pre-migration layout. The cost is that bugs the live runs find are fixed in the module, after the move.
 
 ### Phase 1: Pluggable notification
 
@@ -117,15 +117,10 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 - Turn the nine old command files into forwarding aliases with a deprecation note
 - Update the installer, README, CONVENTIONS.md, CLAUDE.md and every test that names a command
 - Add a test that every script path referenced by a command file exists, and that each alias forwards
+- Rehearse the Bob and Nate exchange on this machine with two clones and two sessions, and record what had to be relayed by hand in `docs/live-exchange.md`
+- Run the hook installer and the `/backbone` commands end to end in a scratch project inside a real Claude Code session (scratch `HOME` for anything global), and record the result in `docs/e2e-check.md`
 
-### Phase 5: Live validation (external)
-
-- Run `tests/test-git-transport.sh` under Git Bash and WSL on a real Windows machine and record the result in `docs/windows-verification.md`
-- Verify the poll, hooks and install on Windows, including that no colon filenames remain
-- Run a real Bob and Nate exchange over git and record what no longer had to be relayed in `docs/live-exchange.md`
-- Fix what the above turns up, then close the three open v5 tasks in `specs/README.md`
-
-### Phase 6: Migrate into aidev-toolkit (next to last)
+### Phase 5: Migrate into aidev-toolkit
 
 - Survey aidev-toolkit (`modules/sdd` layout, installer, absolute-path convention, test location) and record findings in Technical Notes before changing anything
 - Record the module boundary decision: tooling moves, state and specs stay
@@ -135,6 +130,13 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 - Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude`
 - Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module
 - Write a rollback note and open the toolkit PR for the developer to review and merge
+
+### Phase 6: Live validation (Windows runs only after the migration)
+
+- Run `tests/test-git-transport.sh` under Git Bash and WSL on a real Windows machine and record the result in `docs/windows-verification.md`
+- Verify the poll, hooks and install on Windows, including that no colon filenames remain
+- Run a real Bob and Nate exchange over git and record what no longer had to be relayed in `docs/live-exchange.md`
+- Fix what the above turns up, then close the three open v5 tasks in `specs/README.md`
 
 ### Phase 7: Cleanup and release (last)
 
@@ -173,10 +175,26 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 - Coding rules applied: none loaded (no `coding-rules.md` in this repo). The project rule "no mocks" is followed: every test uses real git, real scripts and real files.
 - Architecture principles applied: AP-001 (notifier arguments pass as environment variables, with injection tests), AP-002/AP-007 (hook and ping logging), AP-003 (notifier failure and unreachable-remote paths have explicit tasks and tests), AP-004 (each phase carries its own test task), AP-006 (no new third-party dependencies are introduced).
 
+### Toolkit survey (2026-10-08, read-only; Phase 5)
+
+Recorded before any change to the toolkit, as the spec requires. Source: `~/pgh/aidev-toolkit` (`pgh` is a symlink to `~/Play/github_repos`, so this is the same directory the toolkit's CLAUDE.md names; branch `main`, clean, remote `jerichoBob/aidev-toolkit`, VERSION 0.100.0).
+
+- **Module layout.** `modules/sdd/{scripts,skills,templates}` plus a `README.md`. A module holds scripts, skills (markdown), and templates; the CLAUDE.md says modules are "self-contained skill groups".
+- **Installer.** `scripts/install.sh` keeps a hard-coded array per module (`SDD_SKILLS=(...)`, around line 73) and copies `modules/sdd/skills/<file>` into `~/.claude/commands/` and `~/.claude/skills/` as real files (symlinks were dropped in the toolkit's spec-v99). Script permissions are set with explicit `chmod +x` lines per script (around line 511). A new module therefore needs a `BACKBONE_SKILLS` array, a copy loop, `chmod` lines, an entry in `scripts/dist-manifest.txt`, and a help entry in `docs/aid-help.md`.
+- **Absolute-path convention.** Module scripts are called as `~/.claude/aidev-toolkit/modules/sdd/scripts/<script>` (see the permission list in `install.sh` around lines 238 and 268). `backbone` scripts would live at `~/.claude/aidev-toolkit/modules/backbone/scripts/`.
+- **Existing `backbone-setup` skill.** `skills/backbone-setup.md` (tier extended) clones `jerichoBob/agent-backbone` to `../agent-backbone` and runs `install-backbone-commands.sh` to copy `backbone-*.md`. It matches only `backbone-*.md`, so after v6 it must also install `backbone.md`; it is listed in `install.sh` line 66 and `docs/aid-help.md` line 115.
+- **Tests.** `tests/run-all.sh` finds and runs every `tests/test-*.sh`. Tests are flat files, one per concern, so ported backbone tests would be `tests/test-backbone-*.sh`.
+- **Version.** Tracked in `VERSION` and in the `README.md` `## Version` section; both must change together.
+- **Constraint.** The toolkit forbids editing `~/.claude` directly: changes go through its repo, CI builds `jerichoBob/aidev-toolkit-dist`, and `/aid-update` installs. This matches the spec's rule that the installer is exercised only in a scratch `HOME`.
+
+### Module boundary decision (2026-10-08)
+
+Tooling moves; state and specs stay. In `modules/backbone/` go: `scripts/` (every `backbone-*.sh`, the installer, the lib), `skills/` (the four commands plus the alias files while they exist, and the merged setup skill), and `templates/` (the starter `backbone.config`, `roster.md`, and hook settings snippet). In agent-backbone stay: `specs/`, `CONVENTIONS.md`, `messages/types/` and `messages/README.md` (the protocol, not the tooling), and the reference deployment's `messages/`, `presence/` and `roster.md` state. agent-backbone remains a repo (Open Question 4). Scripts find their state through `--dir`/`BACKBONE_DIR`, never through their own location, so the move needs no change to how state is addressed.
+
 ### Dependencies
 
 - Write access to `~/pgh/aidev-toolkit` (a branch and PR).
-- A Windows machine (Phase 5), and Nate for the live exchange.
+- A Windows machine (Phase 6, after the migration). Nate for the live exchange (any time).
 - For the Radeas notifier: that project's gchat OAuth token and a DM space ID, both outside this repo.
 
 ### Risks & Mitigations
@@ -186,7 +204,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 | Renaming commands breaks projects that have the old ones installed | Keep forwarding aliases until the cleanup phase |
 | Presence rename loses history or breaks readers | Dry-run migration, history-preserving renames, readers scan `agent_name` |
 | A hook error blocks session start | Hooks always exit 0 and print the reason |
-| Moving to the toolkit before live use bakes in bugs | Live validation (Phase 5) precedes migration (Phase 6) |
+| Live validation after the move means bugs it finds are fixed in the module | Phases 1-4 carry 500+ real-git assertions before the move; Phase 6 runs against the installed module and fixes land before the final release |
 | Work in the toolkit touches the global `~/.claude` | Work happens in the repo; the installer is exercised only in a scratch `HOME`; the developer runs the real install |
 | Auto-sent pings read as coming from the sender | `ask` is the default; `auto` is an explicit per-project choice |
 
@@ -195,10 +213,15 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 ## Open Questions
 
 1. ~~**Confirmation default**~~ **Settled (Bob, 2026-10-07):** `notify_confirm=ask` is the default; `auto` is opt-in through a machine default in `backbone.config` with a per-project override (`notify_confirm.<project>=`).
-2. When `agent=` is not configured, is `<repo>:main` an acceptable automatic name, or should the hook refuse to register?
-3. How long should the old command aliases live (one release, or until every project is updated)?
-4. After the migration does agent-backbone remain a repo (specs, conventions, reference state), or fold into the toolkit?
-5. Does the Windows verification use Nate's machine, and when?
+2. ~~When `agent=` is not configured, is `<repo>:main` an acceptable automatic name, or should the hook refuse to register?~~
+   Resolved (2026-10-08): `<repo>:main` is rejected as a fallback because several people (Bob, Nate, Bruno) share repos and would share one identity, inbox and presence file. Fallback is `<repo>:<slug of git config user.name>` with a one-line note that the name was inferred; if no git user is set, the hook refuses to register and prints how to set `agent=`.
+   Resolved (2026-10-08, addendum): one person may run several sessions, so identity and address are separate. The stable address is `<repo>:<user>` (from `agent=` or the fallback above); messages to it reach any of that person's live sessions and the atomic claim decides which one acts. Each session registers presence as `<address>~<4-char random>` (random, not incrementing, so two machines never collide before syncing), so presence files never collide and the roster lists every session. A sender may target one session by its full name. Tasks affected: Phase 2 (safe-name function must allow `~`; inbox matches an address to its sessions) and Phase 3 (session-start generates the suffix and registers it).
+3. ~~How long should the old command aliases live (one release, or until every project is updated)?~~
+   Resolved (2026-10-08): one release. The aliases are removed in the next minor version after they ship, regardless of whether every project has updated. The Phase 4 deprecation note must say this release number, and Phase 7's "once every installed project has run the update" becomes "in the next minor release".
+4. ~~After the migration does agent-backbone remain a repo (specs, conventions, reference state), or fold into the toolkit?~~
+   Resolved (2026-10-08): it remains a repo holding specs, conventions, message types and the reference deployment's state. Only tooling moves (AC-13).
+5. ~~Does the Windows verification use Nate's machine, and when?~~
+   Resolved (2026-10-08): Nate's machine or Bob's Windows laptop, whichever is available first. No date set; Windows testing (now Phase 6, after the migration) is blocked on a Windows machine and the Bob and Nate exchange.
 6. **Sender authenticity (deferred, low priority):** `from:` is plain text and is not verified. The group is small (Bob, Nate, Bruno, possibly more) and the remote is a private repo, so the goal is consistency, not defence against a hostile member or a compromised account. Git history is the source of truth when someone needs to know who sent a message. Revisit if the group grows, write access reaches people outside it, or the remote becomes public. Options if it is ever needed, cheapest first: (a) show the pushing account beside `from:` in `/backbone-inbox`; (b) branch protection with no force pushes; (c) signed commits; (d) per-message signatures or encryption. Message encryption and signatures stay out of scope for v6.
 7. **Google Chat as a message bus, not only a signal (open question, no change proposed):** could Google Chat (inside the company's Workspace) carry the messages themselves, instead of git? Chat is authenticated by the organization and removes the git dependency for people who lack repo access. Against it: it has no atomic claim (two agents could both act on one message), no queryable pending/claimed/complete state, retention depends on Workspace policy, bodies would transit the chat service (v5 keeps them out of pings), and the only gchat code found is a send script in one Radeas project, so there is no read side or per-agent app and OAuth setup. If pursued, the clean shape is a third `transport=chat` alongside `local` and `git`, not a replacement for git. Decide: (a) keep git as the bus and chat as the signal only (current design); (b) specify a `chat` transport in a later version; (c) something else. Revisit if git access becomes the bottleneck for new collaborators.
 
@@ -226,3 +249,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 | 2026-10-07 | Add Open Question 7 (Google Chat as a bus) |
 | 2026-10-07 | Q7: add participant-verification mechanisms |
 | 2026-10-07 | Settle Q1: `ask` default, machine default plus per-project override (AC-2a) |
+| 2026-10-08 | Settle Q2 (address `<repo>:<git user>`, per-session `~suffix`), Q3 (aliases live one release), Q4 (agent-backbone stays a repo), Q5 (Nate's or Bob's Windows machine) |
+| 2026-10-08 | Phases 1-4 implemented; toolkit survey and module boundary recorded; Phase 5 runbooks written; Phases 5-7 blocked on external work |
+| 2026-10-08 | Add two pre-migration validation tasks to Phase 4: a local rehearsal of the Bob and Nate exchange, and an end-to-end check in a real session |
+| 2026-10-08 | Reorder at Bob's direction: migration into the toolkit is now Phase 5; the Windows runs (Phase 6) wait for it. Non-Windows testing is not deferred. Removed a mistaken toolkit-path discrepancy note (`pgh` is a symlink) |
