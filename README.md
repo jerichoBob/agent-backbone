@@ -216,9 +216,14 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.1.2
+0.2.0
 
 ### Release Notes
+
+#### v0.2.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
+
+- feat: add git transport, notification helpers, and secret check
+- docs: add v6 simplification spec and update v5 tracker
 
 #### v0.1.2 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
 
