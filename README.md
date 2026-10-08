@@ -222,9 +222,16 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.5.0
+0.6.0
 
 ### Release Notes
+
+#### v0.6.0 (2026-10-08) — author: robert.w.seaton.jr@gmail.com
+
+- refactor: backbone scripts and the commands `/backbone`, `/backbone-send`, `/backbone-inbox`, `/backbone-done`, `/backbone-setup` moved into aidev-toolkit `modules/backbone/`, installed once by `/aid-update`; this repo keeps protocol, state and specs. The per-project installer, `--link` and copy manifest are gone, and the eight old command names are not ported [`630c334`]
+- fix: three colon-named presence files renamed to Windows-safe names [`ff04e49`]
+- test: one-machine rehearsal of the Bob and Nate exchange and a scripted hook-install e2e; finding: the sender is not told when the receiver completes [`cd2d865`]
+- docs(specs): v6 Phase 5 progress and migration notes [`d04dc45`]
 
 #### v0.5.0 (2026-10-08) — author: robert.w.seaton.jr@gmail.com
 
