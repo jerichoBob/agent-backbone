@@ -216,9 +216,14 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.2.0
+0.3.0
 
 ### Release Notes
+
+#### v0.3.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
+
+- feat: add pluggable notifier script with injection-safe env contract [`79d111c`]
+- docs: settle v6 Q1 (ask default, per-project override) and add Q6 [`614c14a`]
 
 #### v0.2.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
 
