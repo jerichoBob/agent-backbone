@@ -12,7 +12,8 @@
 | v2 | Agent Presence & Discovery | 18/18 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
-| v5 | Git Transport and Notification | 0/17 | 📝 Draft | <robert.w.seaton.jr@gmail.com> |
+| v5 | Git Transport and Notification | 14/17 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v6 | Backbone Simplification and Toolkit Module | 0/37 | ✏️ Draft | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -178,35 +179,99 @@
 
 ### Phase 1: Git sync wrapper and race-safe claim
 
-- [ ] Write scripts/backbone-sync.sh with pull and push subcommands
-- [ ] Route publish, claim, and complete through it when transport=git
-- [ ] Keep local-disk behavior when transport=local or unset
-- [ ] Add the backbone.config transport setting (default local) and make the wrapper honor it, including the unreachable-remote error
-- [ ] Add tests/test-git-transport.sh using two real clones of a local bare repo, including flipping the transport setting
+- [x] Write scripts/backbone-sync.sh with pull and push subcommands
+- [x] Route publish, claim, and complete through it when transport=git
+- [x] Keep local-disk behavior when transport=local or unset
+- [x] Add the backbone.config transport setting (default local) and make the wrapper honor it, including the unreachable-remote error
+- [x] Add tests/test-git-transport.sh using two real clones of a local bare repo, including flipping the transport setting
 
 ### Phase 2: Notification while a session is open or starting
 
-- [ ] Add the SessionStart pending-count hook
-- [ ] Add a Monitor-based poll script and document starting it from /backbone-join
-- [ ] Test the poll is silent with no new messages and fires on a new addressed one
+- [x] Add the SessionStart pending-count hook
+- [x] Add a Monitor-based poll script and document starting it from /backbone-join
+- [x] Test the poll is silent with no new messages and fires on a new addressed one
 
 ### Phase 3: Notification to a closed session
 
-- [ ] Define the agent-to-human map and where it lives
-- [ ] Add the receiver seen marker written by the session-start hook and the poll
-- [ ] Add the 5-minute no-ack gchat ping to /backbone-publish (sender and title only)
+- [x] Define the agent-to-human map and where it lives
+- [x] Add the receiver seen marker written by the session-start hook and the poll
+- [ ] Add the 5-minute no-ack gchat ping to /backbone-publish (sender and title only) — BLOCKED on the send only: trigger, timer and publish step are built and tested (tests/test-git-transport.sh §9); the /gchat send is unverified because no gchat skill is installed here
 
 ### Phase 4: Safety
 
-- [ ] Add the secret-pattern check to /backbone-publish
-- [ ] Add untrusted-message language to CONVENTIONS.md and the inbox display
-- [ ] Document access control requirements for the remote
+- [x] Add the secret-pattern check to /backbone-publish
+- [x] Add untrusted-message language to CONVENTIONS.md and the inbox display
+- [x] Document access control requirements for the remote
 
 ### Phase 5: Windows
 
-- [ ] Add a copy fallback to the install script when symlinks are unavailable
-- [ ] Verify the sync wrapper and Monitor poll on a real Windows machine (Git Bash and WSL)
+- [x] Add a copy fallback to the install script when symlinks are unavailable
+- [ ] Verify the sync wrapper and Monitor poll on a real Windows machine (Git Bash and WSL) — BLOCKED: needs a real Windows machine; nothing in this environment can verify it
 
 ### Phase 6: First live use
 
-- [ ] Use it for a real Bob and Nate exchange and record what no longer had to be relayed
+- [ ] Use it for a real Bob and Nate exchange and record what no longer had to be relayed — BLOCKED: needs a live exchange between two people on two machines
+
+## v6: Backbone Simplification and Toolkit Module
+
+**Spec**: [spec-v6-backbone-simplification-and-toolkit-module.md](spec-v6-backbone-simplification-and-toolkit-module.md)
+
+### Phase 1: Pluggable notification
+
+- [ ] Add `scripts/backbone-notify.sh` implementing the notifier contract without shell interpolation of message text
+- [ ] Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
+- [ ] Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
+- [ ] Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
+- [ ] Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`
+- [ ] Log each ping attempt (target, id, result, never the body) under `.claude/data/backbone/`
+- [ ] Add tests covering injection-safe arguments (quotes, `$(...)`, backticks, newlines), `ask` versus `auto`, notifier failure, and no body in any output
+
+### Phase 2: Windows-safe filenames
+
+- [ ] Define the safe filename function once in `backbone-lib.sh` and use it for presence and seen markers
+- [ ] Make presence lookups scan `agent_name` instead of building a filename (lib plus the join, leave, roster, subscribe and inbox commands)
+- [ ] Add `scripts/backbone-migrate-presence.sh` with dry run, history-preserving renames, and idempotence
+- [ ] Update the presence-lifecycle and git-transport tests for the new names and add a migration test
+
+### Phase 3: Session hooks
+
+- [ ] Extend `backbone-session-start.sh` to register presence, keep the count first, and tell the agent to start the watcher
+- [ ] Add `backbone-session-end.sh` that marks presence inactive and pushes in git mode
+- [ ] Add the hook configuration for both, merged non-destructively into a project's `settings.json`, installed only with the developer's consent
+- [ ] Add tests: first join, idempotent re-join, end marks inactive, hooks exit 0 on any failure, count remains the first line
+
+### Phase 4: Collapse the commands
+
+- [ ] Write `/backbone` with `status`, `join`, `leave`, `subscribe`, `unsubscribe`, `name` and `update`
+- [ ] Write `/backbone-send` combining publish, secret check and ack timer, keeping the intent question
+- [ ] Write `/backbone-done` replacing complete
+- [ ] Update `/backbone-inbox` for the new scripts and keep the untrusted-message display
+- [ ] Turn the nine old command files into forwarding aliases with a deprecation note
+- [ ] Update the installer, README, CONVENTIONS.md, CLAUDE.md and every test that names a command
+- [ ] Add a test that every script path referenced by a command file exists, and that each alias forwards
+
+### Phase 5: Live validation (external)
+
+- [ ] Run `tests/test-git-transport.sh` under Git Bash and WSL on a real Windows machine and record the result in `docs/windows-verification.md`
+- [ ] Verify the poll, hooks and install on Windows, including that no colon filenames remain
+- [ ] Run a real Bob and Nate exchange over git and record what no longer had to be relayed in `docs/live-exchange.md`
+- [ ] Fix what the above turns up, then close the three open v5 tasks in `specs/README.md`
+
+### Phase 6: Migrate into aidev-toolkit (next to last)
+
+- [ ] Survey aidev-toolkit (`modules/sdd` layout, installer, absolute-path convention, test location) and record findings in Technical Notes before changing anything
+- [ ] Record the module boundary decision: tooling moves, state and specs stay
+- [ ] On a branch of aidev-toolkit, create `modules/backbone/{scripts,skills,templates}` and port the scripts with module-path resolution
+- [ ] Merge the toolkit's existing `backbone-setup` skill into the new setup flow
+- [ ] Port the tests into the toolkit's layout and run both repos' suites
+- [ ] Update the toolkit's CLAUDE.md, README and installer; exercise the installer in a scratch `HOME`, never the real `~/.claude`
+- [ ] Cut agent-backbone over: drop per-project script copies, `--link` and the copy manifest, and point commands at the module
+- [ ] Write a rollback note and open the toolkit PR for the developer to review and merge
+
+### Phase 7: Cleanup and release (last)
+
+- [ ] Remove the deprecated aliases once every installed project has run the update
+- [ ] Remove leftover scratch files (asking first) and fix any stale counts in docs
+- [ ] Final documentation pass, version bump, and mark v5 and v6 complete
+
+---

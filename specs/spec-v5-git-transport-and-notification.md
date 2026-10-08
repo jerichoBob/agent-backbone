@@ -2,7 +2,7 @@
 version: 5
 name: git-transport-and-notification
 display_name: "Git Transport and Notification"
-status: draft
+status: in-progress
 created: 2026-10-06
 depends_on: [a2a-coordination-backbone, agent-presence-and-discovery, generic-message-bus]
 tags: [transport, git, notification, cross-machine, windows]
