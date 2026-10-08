@@ -13,7 +13,7 @@
 | v3 | Generic Message Bus | 23/23 | ✅ Complete | <robert.w.seaton.jr@gmail.com> |
 | v4 | HCI/UX Observability Layer | 0/0 | 💡 Idea | <robert.w.seaton.jr@gmail.com> |
 | v5 | Git Transport and Notification | 14/17 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
-| v6 | Backbone Simplification and Toolkit Module | 1/38 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
+| v6 | Backbone Simplification and Toolkit Module | 3/38 | 🔧 In Progress | <robert.w.seaton.jr@gmail.com> |
 
 ---
 
@@ -219,8 +219,8 @@
 ### Phase 1: Pluggable notification
 
 - [x] Add `scripts/backbone-notify.sh` implementing the notifier contract without shell interpolation of message text
-- [ ] Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
-- [ ] Add per-project override resolution (`notify_confirm.<project>=`, then machine default, then `ask`) in `backbone-lib.sh`, read only from the machine-local `backbone.config`
+- [x] Add `notify_command` and `notify_confirm` handling (default `ask`; unset command reports "no notifier configured")
+- [x] Add per-project override resolution (`notify_confirm.<project>=`, then machine default, then `ask`) in `backbone-lib.sh`, read only from the machine-local `backbone.config`
 - [ ] Change `backbone-ack-check.sh` to call the notifier in `auto` and print a `PING` for confirmation in `ask`
 - [ ] Rename the roster `gchat` column to `notify` across the lookup script, docs and tests
 - [ ] Write `docs/notify.md` with the contract and an example wrapper for the Radeas gchat `send.py`

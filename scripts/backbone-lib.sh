@@ -5,7 +5,11 @@
 bb_config_get() {
   local f="$1/backbone.config"
   [[ -f "$f" ]] || return 0
-  grep -E "^[[:space:]]*$2[[:space:]]*=" "$f" | tail -1 | sed -E "s/^[^=]*=[[:space:]]*//; s/[[:space:]\r]+\$//"
+  # exact key match (a "." in a per-project key such as notify_confirm.my.app is literal, not a wildcard)
+  awk -v k="$2" '
+    index($0, "=") { key = substr($0, 1, index($0, "=") - 1); gsub(/^[ \t]+|[ \t\r]+$/, "", key)
+      if (key == k) { v = substr($0, index($0, "=") + 1); gsub(/^[ \t]+|[ \t\r]+$/, "", v); r = v; found = 1 } }
+    END { if (found) print r }' "$f"
 }
 
 # bb_transport <dir> — print effective transport (local|git). Default local. Invalid value is an error.
@@ -119,4 +123,18 @@ bb_default_dir() {
   if [[ -n "${BACKBONE_DIR:-}" ]]; then echo "$BACKBONE_DIR"
   elif [[ -d ../agent-backbone ]]; then echo ../agent-backbone
   else echo "$1/.."; fi
+}
+
+# bb_notify_confirm <dir> <agent> — print ask|auto for pings sent as <agent>.
+# Order: notify_confirm.<project> (project = agent name before the colon), then notify_confirm, then ask.
+# Read only from the machine-local backbone.config. An invalid value is an error (exit 4), not a silent default.
+bb_notify_confirm() {
+  local dir="$1" project="${2%%:*}" v
+  v="$(bb_config_get "$dir" "notify_confirm.$project")"
+  [[ -n "$v" ]] || v="$(bb_config_get "$dir" notify_confirm)"
+  v="${v:-ask}"
+  case "$v" in
+    ask|auto) echo "$v" ;;
+    *) echo "backbone: invalid notify_confirm '$v' in $dir/backbone.config (expected ask or auto)" >&2; return 4 ;;
+  esac
 }

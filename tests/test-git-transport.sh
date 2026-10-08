@@ -398,6 +398,40 @@ assert_eq "$rc" "1" "failing notifier exits 1"
 bash "$NOTIFY" --dir "$ND" --from a:main >/dev/null 2>&1; rc=$?
 assert_eq "$rc" "4" "missing --target/--id exits 4"
 
+# ── 14. notify_confirm resolution (v6 Phase 1) ─────────────────────────────────
+echo ""
+echo "14. notify_confirm precedence"
+source "$ROOT/scripts/backbone-lib.sh"
+CD="$TMP_DIR/confirm"; mkdir -p "$CD"
+
+assert_eq "$(bb_notify_confirm "$CD" stak-app:main)" "ask" "no config defaults to ask"
+
+printf 'notify_confirm=auto\n' > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" stak-app:main)" "auto" "machine default auto applies"
+
+printf 'notify_confirm=auto\nnotify_confirm.radeas-analyst-amplifier=ask\n' > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" radeas-analyst-amplifier:main)" "ask" "project override beats machine default"
+assert_eq "$(bb_notify_confirm "$CD" stak-app:main)" "auto" "other projects keep machine default"
+
+printf 'notify_confirm=ask\nnotify_confirm.stak-app=auto\n' > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" stak-app:feature-x)" "auto" "override applies to any agent in the project"
+
+printf 'notify_confirm.my.app=auto\n' > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" myXapp:main)" "ask" "dot in project key is literal"
+assert_eq "$(bb_notify_confirm "$CD" my.app:main)" "auto" "dotted project name matches itself"
+
+printf 'notify_confirm=sometimes\n' > "$CD/backbone.config"
+bb_notify_confirm "$CD" a:main >/dev/null 2>&1; rc=$?
+assert_eq "$rc" "4" "invalid value is an error"
+
+printf '  notify_confirm = auto \r\n# notify_confirm=ask\n' > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" a:main)" "auto" "whitespace, CR and comments tolerated"
+
+# overrides are never read from a project repo
+mkdir -p "$CD/proj"; printf 'notify_confirm.proj=auto\n' > "$CD/proj/backbone.config"
+: > "$CD/backbone.config"
+assert_eq "$(bb_notify_confirm "$CD" proj:main)" "ask" "config inside a project directory is ignored"
+
 # ── SECTIONS-INSERT-BEFORE-SUMMARY ────────────────────────────────────────────
 
 # ── Summary ───────────────────────────────────────────────────────────────────
