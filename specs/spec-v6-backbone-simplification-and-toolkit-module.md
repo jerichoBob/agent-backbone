@@ -200,6 +200,7 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 4. After the migration does agent-backbone remain a repo (specs, conventions, reference state), or fold into the toolkit?
 5. Does the Windows verification use Nate's machine, and when?
 6. **Sender authenticity (deferred, low priority):** `from:` is plain text and is not verified. The group is small (Bob, Nate, Bruno, possibly more) and the remote is a private repo, so the goal is consistency, not defence against a hostile member or a compromised account. Git history is the source of truth when someone needs to know who sent a message. Revisit if the group grows, write access reaches people outside it, or the remote becomes public. Options if it is ever needed, cheapest first: (a) show the pushing account beside `from:` in `/backbone-inbox`; (b) branch protection with no force pushes; (c) signed commits; (d) per-message signatures or encryption. Message encryption and signatures stay out of scope for v6.
+7. **Google Chat as a message bus, not only a signal (open question, no change proposed):** could Google Chat (inside the company's Workspace) carry the messages themselves, instead of git? Chat is authenticated by the organization and removes the git dependency for people who lack repo access. Against it: it has no atomic claim (two agents could both act on one message), no queryable pending/claimed/complete state, retention depends on Workspace policy, bodies would transit the chat service (v5 keeps them out of pings), and the only gchat code found is a send script in one Radeas project, so there is no read side or per-agent app and OAuth setup. If pursued, the clean shape is a third `transport=chat` alongside `local` and `git`, not a replacement for git. Decide: (a) keep git as the bus and chat as the signal only (current design); (b) specify a `chat` transport in a later version; (c) something else. Revisit if git access becomes the bottleneck for new collaborators.
 
 ---
 
@@ -209,4 +210,5 @@ tags: [simplification, notification, hooks, windows, toolkit-module, migration]
 | ---------- | ------------- |
 | 2026-10-07 | Initial draft |
 | 2026-10-07 | Add Open Question 6 (sender authenticity) |
+| 2026-10-07 | Add Open Question 7 (Google Chat as a bus) |
 | 2026-10-07 | Settle Q1: `ask` default, machine default plus per-project override (AC-2a) |
