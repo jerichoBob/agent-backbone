@@ -356,6 +356,48 @@ echo "stale" >> "$T3/.claude/commands/backbone-publish.md"
 BACKBONE_SYMLINKS=0 bash "$INSTALL" "$T3" --link >/dev/null
 if cmp -s "$ROOT/.claude/commands/backbone-publish.md" "$T3/.claude/commands/backbone-publish.md"; then pass "re-running the installer refreshes a stale copy"; else fail "stale copy was not refreshed"; fi
 
+# ── 13. Notifier contract (v6 Phase 1) ─────────────────────────────────────────
+echo ""
+echo "13. Notifier"
+NOTIFY="$ROOT/scripts/backbone-notify.sh"
+ND="$TMP_DIR/notify"; mkdir -p "$ND"
+
+# no notifier configured: nothing attempted, exit 3
+bash "$NOTIFY" --dir "$ND" --target T --from a:main --title hi --id task-1 >/dev/null 2>&1; rc=$?
+assert_eq "$rc" "3" "no notify_command exits 3"
+
+# a notifier that records its environment, one variable per file so newlines survive
+cat > "$ND/capture.sh" <<'EOS'
+#!/usr/bin/env bash
+out="$(dirname "$0")/captured"; mkdir -p "$out"
+printf '%s' "$BACKBONE_NOTIFY_TARGET" > "$out/target"
+printf '%s' "$BACKBONE_NOTIFY_TEXT"   > "$out/text"
+printf '%s' "$BACKBONE_NOTIFY_FROM"   > "$out/from"
+printf '%s' "$BACKBONE_NOTIFY_TITLE"  > "$out/title"
+printf '%s' "$BACKBONE_NOTIFY_ID"     > "$out/id"
+printf '%s' "$*" > "$out/argv"
+EOS
+echo "notify_command=bash $ND/capture.sh" > "$ND/backbone.config"
+
+HOSTILE=$'He said "hi" $(touch '"$ND"'/pwned) `touch '"$ND"'/pwned2`\nline two'
+bash "$NOTIFY" --dir "$ND" --target "spaces/AAAA" --from "stak-app:main" --title "$HOSTILE" --id "task-9" >/dev/null 2>&1; rc=$?
+assert_eq "$rc" "0" "notifier success exits 0"
+assert_eq "$(cat "$ND/captured/target")" "spaces/AAAA" "target passed in environment"
+assert_eq "$(cat "$ND/captured/title")" "$HOSTILE" "hostile title arrives unchanged"
+assert_eq "$(cat "$ND/captured/text")" "stak-app:main sent you \"$HOSTILE\" on the backbone (task-9)" "text built from sender, title, id"
+assert_no_file "$ND/pwned" "\$(...) in title not executed"
+assert_no_file "$ND/pwned2" "backticks in title not executed"
+assert_eq "$(cat "$ND/captured/argv")" "" "no text passed as command arguments"
+
+# a failing notifier is reported, not hidden
+echo "notify_command=false" > "$ND/backbone.config"
+bash "$NOTIFY" --dir "$ND" --target T --from a:main --title hi --id task-2 >/dev/null 2>&1; rc=$?
+assert_eq "$rc" "1" "failing notifier exits 1"
+
+# missing required args
+bash "$NOTIFY" --dir "$ND" --from a:main >/dev/null 2>&1; rc=$?
+assert_eq "$rc" "4" "missing --target/--id exits 4"
+
 # ── SECTIONS-INSERT-BEFORE-SUMMARY ────────────────────────────────────────────
 
 # ── Summary ───────────────────────────────────────────────────────────────────

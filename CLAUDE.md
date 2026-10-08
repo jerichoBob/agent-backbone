@@ -23,7 +23,7 @@ It holds no application code. Its role is shared context, cross-project slash co
 - `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
 - `scripts/` — install script plus the v5 git-transport helpers (`backbone-sync.sh`, `backbone-poll.sh`, `backbone-session-start.sh`, `backbone-ack-check.sh`, `backbone-secret-check.sh`, `backbone-roster-lookup.sh`)
 - `docs/git-transport.md` — how to run the backbone over git (opt-in via `transport=git` in `backbone.config`; default is local disk)
-- `tests/` — lifecycle tests (backbone-workflow 43, message-bus 47, presence-lifecycle 38, git-transport 117 — all passing)
+- `tests/` — lifecycle tests (backbone-workflow 43, message-bus 47, presence-lifecycle 38, git-transport 127 — all passing)
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -69,7 +69,7 @@ When working on this repo:
 | `tests/test-backbone-workflow.sh` | Backbone workflow test (43 assertions) |
 | `tests/test-message-bus.sh` | Generic bus test (47 assertions) |
 | `tests/test-presence-lifecycle.sh` | Presence test (38 assertions) |
-| `tests/test-git-transport.sh` | Git transport, notification, secret check, install (117 assertions; real git, two clones) |
+| `tests/test-git-transport.sh` | Git transport, notification, secret check, install (127 assertions; real git, two clones) |
 | `scripts/install-backbone-commands.sh` | Copy (or `--link`) backbone commands and helper scripts into project repos |
 | `scripts/backbone-sync.sh` | The only code that touches git; honors `transport=local\|git` |
 | `.claude/commands/backbone-*.md` | Backbone slash commands (8 commands) |
