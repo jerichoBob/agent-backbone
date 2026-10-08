@@ -1,6 +1,6 @@
 # Message Store
 
-This directory is the active message bus for the agent backbone. Messages are written here by `/backbone-publish` and claimed by `/backbone-inbox`. Completed messages are moved to `messages/archive/` by `/backbone-complete` — they never accumulate here.
+This directory is the active message bus for the agent backbone. Messages are written here by `/backbone-send` and claimed by `/backbone-inbox`. Completed messages are moved to `messages/archive/` by `/backbone-done` — they never accumulate here.
 
 ---
 
@@ -69,7 +69,7 @@ All message types share the same lifecycle:
 ```text
 pending
   └─► claimed      (/backbone-inbox — receiver claims)
-        └─► complete  (/backbone-complete — receiver closes, file moves to archive/)
+        └─► complete  (/backbone-done — receiver closes, file moves to archive/)
 ```
 
 Each transition: renames the file + updates `status` and `updated` in frontmatter.
@@ -81,9 +81,9 @@ Each transition: renames the file + updates `status` and `updated` in frontmatte
 | Mode | Field | Behavior |
 |------|-------|---------|
 | `direct` | `to: agent-name` | Delivered to the named agent's inbox. Use `to: any` for an unclaimed broadcast. |
-| `topic` | `topic: topic-name` | Delivered to all agents subscribed to that topic via `/backbone-subscribe`. First claimer wins (competing consumers). |
+| `topic` | `topic: topic-name` | Delivered to all agents subscribed to that topic via `/backbone subscribe`. First claimer wins (competing consumers). |
 
-Run `/backbone-roster` to see registered agents before publishing. Run `/backbone-join` to register this session.
+Run `/backbone status` to see registered agents before publishing. Run `/backbone join` to register this session.
 
 ---
 
@@ -91,11 +91,11 @@ Run `/backbone-roster` to see registered agents before publishing. Run `/backbon
 
 | Command | Action |
 |---------|--------|
-| `/backbone-publish` | Publish a new message (any type, direct or topic) |
+| `/backbone-send` | Publish a new message (any type, direct or topic) |
 | `/backbone-inbox` | See and claim messages addressed to this agent |
-| `/backbone-subscribe` | Subscribe to a topic |
-| `/backbone-unsubscribe` | Remove a topic subscription |
-| `/backbone-complete` | Fill completion notes, mark complete, archive the file |
+| `/backbone subscribe` | Subscribe to a topic |
+| `/backbone unsubscribe` | Remove a topic subscription |
+| `/backbone-done` | Fill completion notes, mark complete, archive the file |
 
 ---
 

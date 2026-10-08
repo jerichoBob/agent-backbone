@@ -35,9 +35,9 @@ The agents stay in their own repos. You stay in control. But instead of copy-pas
 ```text
 stak-app/                    grostak-v2/
     |                             |
-    | /backbone-join              | /backbone-join
-    | /backbone-publish           | /backbone-inbox
-    |                             | /backbone-complete
+    | (SessionStart hook joins)   | (SessionStart hook joins)
+    | /backbone-send              | /backbone-inbox
+    |                             | /backbone-done
     +-----> agent-backbone/ <-----+
                 |
           ├─ messages/        ← active message bus
@@ -100,25 +100,26 @@ Inside each file: YAML frontmatter (routing, timestamps, metadata) + prose secti
 
 ## Slash commands
 
-These commands are installed to your project repos (grostak-v2, stak-app, etc.) via symlinks:
-
-### Core Message Bus
+These commands are installed into your project repos (grostak-v2, stak-app, etc.). Four commands cover the daily work:
 
 | Command | What it does |
 |---------|--------------|
-| `/backbone-publish` | Draft and publish a message (any type: cr, task, etc.) with direct or topic routing |
+| `/backbone-send` | Draft and send a message (any type: cr, task, etc.) with direct or topic routing. Refuses secrets, pushes in git mode, starts the no-ack timer |
 | `/backbone-inbox` | See and claim messages addressed to you (direct messages + subscribed topics) |
-| `/backbone-complete` | Fill completion notes, mark done, archive the message |
-| `/backbone-subscribe` | Subscribe to a topic (messages published to that topic appear in your inbox) |
-| `/backbone-unsubscribe` | Remove a topic subscription |
+| `/backbone-done` | Fill completion notes, mark done, archive the message |
+| `/backbone` | Everything else, by subcommand: `status` (roster), `join`, `leave`, `subscribe <topic>`, `unsubscribe <topic>`, `name [address]`, `update` |
 
-### Presence & Discovery
+(`/backbone-setup` bootstraps the backbone from aidev-toolkit.) The old names `/backbone-publish`, `-complete`, `-join`, `-leave`, `-roster`, `-subscribe`, `-unsubscribe` and `-update` still work as forwarding aliases that print a deprecation note, and are removed in 0.6.0.
 
-| Command | What it does |
-|---------|--------------|
-| `/backbone-join` | Register this session as an agent (shows roster of active/stale/inactive agents) |
-| `/backbone-leave` | Mark yourself inactive, write learned summary |
-| `/backbone-roster` | Show active agents (name, repo, task, capabilities) and recent activity |
+### Sessions register themselves
+
+With the optional hooks installed (`install-backbone-commands.sh <repo> --hooks`, which shows what it adds and asks first), a SessionStart hook registers your session, prints the pending count first, and tells the agent to start the watcher; a SessionEnd hook marks it inactive. You never type `/backbone join`. Writing the "Learned" summary still needs `/backbone leave`, because a hook cannot do that.
+
+**Identity.** Your *address* (`stak-app:bob`) is what others send to; each session is `address~ab12`, so several of your sessions never collide, and a message to the address reaches all of them (the first to claim wins). Without `agent=` in `backbone.config` the address is `<repo>:<git user.name>`; with no git user the hook refuses rather than share a name. Presence filenames use `__` for `:` so Windows can create them; the real name is the `agent_name` inside the file.
+
+### Notification
+
+When a direct message goes unacknowledged for 5 minutes, the sender's session pings the receiver's human through a command you configure (`notify_command=` in the machine-local `backbone.config`). `notify_confirm=ask` (default) shows the exact target and text first; `auto` sends without asking, and can be set per project with `notify_confirm.<project>=`. See [docs/notify.md](docs/notify.md).
 
 ### Installation
 
@@ -128,7 +129,7 @@ From any project repo:
 bash ../agent-backbone/scripts/install-backbone-commands.sh
 ```
 
-This symlinks `.claude/commands/backbone-*.md` from agent-backbone into your repo's `.claude/commands/` directory.
+This installs `.claude/commands/backbone*.md` and the helper scripts from agent-backbone into your repo's `.claude/` directory. Add `--hooks` to be offered the session hooks (it asks before changing `settings.json`).
 
 ---
 
@@ -148,7 +149,7 @@ Message types are defined in `messages/types/`. Each type has a schema file that
 | `task` | [messages/types/task.md](messages/types/task.md) | Task assignment — delegate discrete work to another agent |
 | `feedback` | [messages/types/feedback.md](messages/types/feedback.md) | Bug reports, ideas, questions about the backbone itself |
 
-To add a new type, write a schema file in `messages/types/{type}.md`. No command changes needed — `/backbone-publish` reads the registry dynamically.
+To add a new type, write a schema file in `messages/types/{type}.md`. No command changes needed — `/backbone-send` reads the registry dynamically.
 
 ---
 
@@ -157,17 +158,17 @@ To add a new type, write a schema file in `messages/types/{type}.md`. No command
 The backbone is itself a message recipient. From any repo, any agent can report a bug, propose an improvement, or ask a question:
 
 ```
-/backbone-publish --type feedback
+/backbone-send --type feedback
 ```
 
 Feedback messages route to `topic: backbone-meta`. The backbone maintainer session — whoever has joined as `agent-backbone:maintainer` — is auto-subscribed to that topic and sees all feedback in `/backbone-inbox`.
 
-**To become the maintainer:** open a session in `agent-backbone/` and run `/backbone-join`. When the working directory is `agent-backbone`, the command suggests `agent-backbone:maintainer` as the name and auto-subscribes to `backbone-meta`.
+**To become the maintainer:** open a session in `agent-backbone/` and start a session (or run `/backbone join`). When the working directory is `agent-backbone`, the command suggests `agent-backbone:maintainer` as the name and auto-subscribes to `backbone-meta`.
 
 ```plaintext
 stak-app/            grostak-v2/         agent-backbone/
     |                     |                    |
-    | /backbone-publish   | /backbone-publish   | /backbone-join
+    | /backbone-send      | /backbone-send      | (hook joins)
     |   --type feedback   |   --type feedback   |   (as maintainer)
     |                     |                    |
     +------> topic: backbone-meta <------------+
@@ -216,9 +217,17 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 ## Changelog
 
-0.4.0
+0.5.0
 
 ### Release Notes
+
+#### v0.5.0 (2026-10-08) — author: robert.w.seaton.jr@gmail.com
+
+- feat: pluggable notifier with `ask`/`auto` confirmation, per-project override, ping log and `docs/notify.md`; roster column renamed `notify`
+- feat: Windows-safe presence and seen-marker filenames, lookups scan `agent_name`, `backbone-migrate-presence.sh`
+- feat: SessionStart/SessionEnd hooks register and deregister sessions (`<address>~<suffix>` per session); consent-based hook installer
+- feat: commands collapsed to `/backbone`, `/backbone-send`, `/backbone-inbox`, `/backbone-done`; old names are aliases removed in 0.6.0
+- docs: toolkit survey and module boundary for the Phase 6 migration; Windows and live-exchange runbooks
 
 #### v0.4.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
 

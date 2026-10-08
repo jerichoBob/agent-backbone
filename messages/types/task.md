@@ -28,7 +28,7 @@ In addition to the base fields, task messages add:
 
 ## Completion Notes
 
-When calling `/backbone-complete` on a claimed task, write **Completion Notes** covering:
+When calling `/backbone-done` on a claimed task, write **Completion Notes** covering:
 
 - What was done (files changed, decisions made)
 - Whether all acceptance criteria were met — if not, which ones weren't and why
@@ -63,5 +63,5 @@ query is doing a full table scan on large tenants.
 
 # Completion Notes
 
-<!-- filled in by receiver via /backbone-complete -->
+<!-- filled in by receiver via /backbone-done -->
 ```

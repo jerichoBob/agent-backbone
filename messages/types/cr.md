@@ -29,7 +29,7 @@ In addition to the base fields, CR messages add:
 
 ## Completion Notes
 
-When calling `/backbone-complete` on a claimed CR, the receiver should write **Implementation Notes** covering:
+When calling `/backbone-done` on a claimed CR, the receiver should write **Implementation Notes** covering:
 
 - Endpoints added or modified (full signatures)
 - Schema changes and migration file path
@@ -68,7 +68,7 @@ Add POST /api/refills accepting { medication_id, notes }...
 
 # Implementation Notes
 
-<!-- filled in by receiver via /backbone-complete -->
+<!-- filled in by receiver via /backbone-done -->
 
 # Follow-up Notes
 

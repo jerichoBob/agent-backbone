@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Installs backbone slash commands and helper scripts into a target repo.
-#   commands: <target>/.claude/commands/backbone-*.md
+#   commands: <target>/.claude/commands/backbone.md and backbone-*.md
 #   scripts:  <target>/.claude/scripts/backbone/backbone-*.sh
 # Globs the sources — no explicit list to maintain.
 #
-# Usage: bash scripts/install-backbone-commands.sh <target-repo-path> [--link]
+# Usage: bash scripts/install-backbone-commands.sh <target-repo-path> [--link] [--hooks]
 #
 #   (default)  copy every file. Works everywhere, including Windows without symlink support.
 #   --link     symlink instead, so edits to agent-backbone show up immediately. If a symlink
 #              cannot be created (Windows without developer mode, some filesystems) that file
 #              falls back to a copy. Set BACKBONE_SYMLINKS=0 to skip the symlink attempt and
 #              exercise that fallback on any OS.
+#   --hooks    also offer to add the SessionStart and SessionEnd hooks to the target's
+#              .claude/settings.json. It shows what it would add and asks first; nothing is
+#              changed without consent (see scripts/backbone-install-hooks.sh).
 #
 # Every file that was copied (not linked) is listed in <target>/.claude/.backbone-copied so
 # /backbone-update knows which files are snapshots that need refreshing.
@@ -22,16 +25,17 @@ CMD_SRC="$BACKBONE_DIR/.claude/commands"
 SCRIPT_SRC="$BACKBONE_DIR/scripts"
 
 usage() {
-  echo "Usage: bash scripts/install-backbone-commands.sh <target-repo-path> [--link]"
+  echo "Usage: bash scripts/install-backbone-commands.sh <target-repo-path> [--link] [--hooks]"
   exit 1
 }
 
 [[ $# -lt 1 ]] && usage
 TARGET_REPO="$1"; shift
-LINK=0
+LINK=0; HOOKS=0
 for arg in "$@"; do
   case "$arg" in
     --link) LINK=1 ;;
+    --hooks) HOOKS=1 ;;
     *) usage ;;
   esac
 done
@@ -66,7 +70,7 @@ echo ""
 echo "Installing backbone into: $TARGET_REPO/.claude"
 echo ""
 
-for src in "$CMD_SRC"/backbone-*.md; do
+for src in "$CMD_SRC"/backbone.md "$CMD_SRC"/backbone-*.md; do
   install_one "$src" "$CMD_DST/$(basename "$src")"
 done
 for src in "$SCRIPT_SRC"/backbone-*.sh; do
@@ -76,8 +80,14 @@ done
 copied="$(wc -l < "$MANIFEST" | tr -d ' ')"
 [[ "$copied" -eq 0 ]] && rm -f "$MANIFEST"
 
+if [[ $HOOKS -eq 1 ]]; then
+  echo ""
+  bash "$SCRIPT_SRC/backbone-install-hooks.sh" "$TARGET_REPO" || echo "Hooks not installed (exit $?). Re-run: bash $SCRIPT_SRC/backbone-install-hooks.sh \"$TARGET_REPO\""
+fi
+
 echo ""
-echo "Done. Run /backbone-join to register this session."
+echo "Done. With the SessionStart hook installed, sessions register themselves; otherwise run /backbone join."
+echo "Hooks are optional and never added without consent: bash $SCRIPT_SRC/backbone-install-hooks.sh \"$TARGET_REPO\""
 echo "Note: ../agent-backbone/ must be accessible as a sibling directory from the target repo."
 [[ $LINK -eq 1 && "$copied" -gt 0 ]] && echo "Note: $copied file(s) were copied, not linked — re-run /backbone-update to refresh them."
 exit 0

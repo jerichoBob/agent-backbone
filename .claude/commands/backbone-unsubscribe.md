@@ -1,36 +1,7 @@
-# /backbone-unsubscribe — Remove a topic subscription
+# /backbone-unsubscribe — deprecated, use /backbone unsubscribe
 
-Use this command to remove a topic from this session's subscription list.
+**Deprecated alias.** Print this note first, in one line: `/backbone-unsubscribe is now /backbone unsubscribe. The old name is removed in backbone 0.6.0.`
 
-## Pre-flight check
+Then do exactly what /backbone unsubscribe does. Follow the `subscribe / unsubscribe` section of `.claude/commands/backbone.md`, unsubscribing from the topic given as the argument.
 
-Find this session's presence record in `../agent-backbone/presence/`. If none exists:
-> "No presence record found. Run /backbone-join first."
-
-## Step 1: Determine the topic
-
-If a topic was passed as an argument (e.g. `/backbone-unsubscribe patient-api`), use it directly.
-
-Otherwise, read the `subscriptions` list from the presence record and display it:
-
-```
-Active subscriptions:
-  1) patient-api
-  2) schema-changes
-
-Remove which? (number or topic name, 'skip' to cancel)
-```
-
-If subscriptions list is empty: "No active subscriptions. Nothing to remove."
-
-## Step 2: Update the presence record
-
-Remove the topic from the `subscriptions` list in frontmatter. Write `updated: {today}`.
-
-## Step 3: Confirm
-
-```
-Unsubscribed: {agent_name} ✕ topic "{topic}"
-
-Remaining subscriptions: {list, or "none"}
-```
+Do not run any other steps from memory: the behavior lives in the target command file, so this alias cannot drift from it.

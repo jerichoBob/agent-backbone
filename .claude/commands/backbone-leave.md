@@ -1,72 +1,7 @@
-# /backbone-leave — Deregister and leave a learned summary
+# /backbone-leave — deprecated, use /backbone leave
 
-Run this at the end of a session to mark yourself inactive and persist what you learned for future agents.
+**Deprecated alias.** Print this note first, in one line: `/backbone-leave is now /backbone leave. The old name is removed in backbone 0.6.0.`
 
-## Transport
+Then do exactly what /backbone leave does. Follow the `leave` section of `.claude/commands/backbone.md` with the same arguments.
 
-Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
-
-```bash
-SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
-bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
-```
-
-- `local` — skip every `$SYNC` step below.
-- `git` — run them. Exit `2` (remote unreachable) means stop and tell the developer; never fall back to local.
-
-## Pre-flight check
-
-Find this session's presence record. Read all files in `../agent-backbone/presence/` and identify the one matching this session's agent name (infer from working directory if needed).
-
-If no presence record found:
-> "No presence record found for this session. Run /backbone-join first to register before leaving."
-
-Stop if not found.
-
-## Step 1: Write the Learned section
-
-Prompt Claude to synthesize a concise **Learned** section (5–10 bullets max) covering:
-
-- **What was built or changed** — specific files, endpoints, schema, migrations
-- **Decisions made** — architectural choices, tradeoffs, things that were ruled out
-- **Open questions left behind** — anything unresolved that the next agent picking this up should know
-- **Surprises or gotchas** — things that weren't obvious from the code or spec
-
-Keep it tight. This is a handoff note, not a transcript. Future agents will read it at join time.
-
-Example:
-
-```
-- Implemented /cr-inbox as a generic command — filters by agent name from presence record, not hardcoded role
-- Decided against daemon-based TTL enforcement; reading agent computes staleness from timestamps
-- Open: /backbone-join name inference needs testing across more repo layouts
-- Gotcha: sed -i '' syntax differs on macOS vs Linux — test scripts use the macOS form
-```
-
-## Step 2: Update the presence record
-
-**Get the current timestamp first — do not approximate:**
-
-```bash
-date -u +%Y-%m-%dT%H:%M:%SZ
-```
-
-Read the current presence file. Update:
-
-1. Fill in the `# Learned` section with the synthesized bullets
-2. Set `status: inactive`
-3. Set `updated:` to the exact shell output above
-
-Write the updated file back (same path — do not rename).
-
-**git transport only:** `bash "$SYNC" --dir ../agent-backbone push leave {agent_name}`. Stop the Monitor watcher started at join, if it is still running.
-
-## Step 3: Confirm
-
-```
-Left backbone: {agent_name}
-Presence record updated: ../agent-backbone/presence/presence-{agent_name}.md
-
-Learned summary persisted ({N} bullets).
-Future agents joining with similar capabilities will see this in /backbone-join hints.
-```
+Do not run any other steps from memory: the behavior lives in the target command file, so this alias cannot drift from it.

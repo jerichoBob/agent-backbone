@@ -16,14 +16,14 @@ It holds no application code. Its role is shared context, cross-project slash co
 - `.claude/commands/` — backbone slash commands (publish, inbox, join, leave, complete, subscribe, etc.)
 - `messages/` — active message bus (pending and claimed messages)
 - `messages/types/` — message type registry (cr, task, and future types)
-- `messages/archive/` — completed messages (moved here by /backbone-complete)
+- `messages/archive/` — completed messages (moved here by /backbone-done)
 - `presence/` — agent registry (who's active, what they're working on, their capabilities)
 - `.claude/context-architecture-relationship.md` — canonical explanation of how grostak-v2 and stak-app relate
 - `.claude/learnings.md` — captured lessons and correction rules (read before doing anything non-trivial)
 - `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
-- `scripts/` — install script plus the v5 git-transport helpers (`backbone-sync.sh`, `backbone-poll.sh`, `backbone-session-start.sh`, `backbone-ack-check.sh`, `backbone-secret-check.sh`, `backbone-roster-lookup.sh`)
+- `scripts/` — install script plus the v5 git-transport helpers (`backbone-sync.sh`, `backbone-poll.sh`, `backbone-session-start.sh`, `backbone-session-end.sh`, `backbone-install-hooks.sh`, `backbone-ack-check.sh`, `backbone-notify.sh`, `backbone-secret-check.sh`, `backbone-roster-lookup.sh`, `backbone-presence.sh`, `backbone-name.sh`, `backbone-migrate-presence.sh`)
 - `docs/git-transport.md` — how to run the backbone over git (opt-in via `transport=git` in `backbone.config`; default is local disk)
-- `tests/` — lifecycle tests (backbone-workflow 43, message-bus 47, presence-lifecycle 38, git-transport 137 — all passing)
+- `tests/` — lifecycle tests (backbone-workflow 46, message-bus 50, presence-lifecycle 71, git-transport 246, commands 113 — all passing)
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -37,14 +37,12 @@ The cross-project coordination problem: schema changes on the platform side requ
 
 | Command | Purpose |
 |---------|---------|
-| `/backbone-join` | Register this session, see who else is active |
-| `/backbone-publish` | Draft and send a message (cr, task, or any registered type) |
+| `/backbone-send` | Draft and send a message (cr, task, or any registered type); secret check and no-ack timer included |
 | `/backbone-inbox` | See messages addressed to you, claim one to work on |
-| `/backbone-complete` | Write completion notes, archive the message |
-| `/backbone-subscribe` | Subscribe to a topic (messages to that topic appear in your inbox) |
-| `/backbone-unsubscribe` | Remove a topic subscription |
-| `/backbone-leave` | Mark inactive, write what you learned |
-| `/backbone-roster` | Show all agents (active/stale/inactive) |
+| `/backbone-done` | Write completion notes, archive the message |
+| `/backbone` | Subcommands: `status` (roster), `join`, `leave`, `subscribe`, `unsubscribe`, `name`, `update` |
+
+The SessionStart/SessionEnd hooks (optional, installed only with consent) register and deregister sessions. The old names (`/backbone-publish`, `-complete`, `-join`, `-leave`, `-roster`, `-subscribe`, `-unsubscribe`, `-update`) are forwarding aliases removed in 0.6.0.
 
 Install commands into a project repo: `bash ../agent-backbone/scripts/install-backbone-commands.sh`
 
@@ -53,7 +51,7 @@ Install commands into a project repo: `bash ../agent-backbone/scripts/install-ba
 When working on this repo:
 
 1. **Specs first** — see `specs/README.md` for the tracker. Each spec has phases and tasks.
-2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh && bash tests/test-git-transport.sh` before marking tasks complete.
+2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh && bash tests/test-git-transport.sh && bash tests/test-commands.sh` before marking tasks complete.
 3. **Update docs** — keep README.md and specs/README.md in sync with code changes.
 
 ## File purposes
@@ -63,16 +61,19 @@ When working on this repo:
 | `messages/` | Active message bus (pending & claimed messages) |
 | `messages/types/cr.md` | Change request schema definition |
 | `messages/types/task.md` | Task assignment schema definition |
-| `messages/archive/` | Completed messages (moved by /backbone-complete) |
+| `messages/archive/` | Completed messages (moved by /backbone-done) |
 | `presence/` | Agent registry (active/stale/inactive agents) |
 | `specs/README.md` | Progress tracker for all specs (v1-v4) |
-| `tests/test-backbone-workflow.sh` | Backbone workflow test (43 assertions) |
-| `tests/test-message-bus.sh` | Generic bus test (47 assertions) |
-| `tests/test-presence-lifecycle.sh` | Presence test (38 assertions) |
-| `tests/test-git-transport.sh` | Git transport, notification, secret check, install (137 assertions; real git, two clones) |
+| `tests/test-backbone-workflow.sh` | Backbone workflow test (46 assertions) |
+| `tests/test-message-bus.sh` | Generic bus test (50 assertions) |
+| `tests/test-presence-lifecycle.sh` | Presence test (71 assertions: safe names, agent_name lookups, migration) |
+| `tests/test-git-transport.sh` | Git transport, notifier, session hooks, secret check, install (246 assertions; real git, two clones) |
+| `tests/test-commands.sh` | Command integrity: scripts named exist, aliases forward, installer ships everything (113 assertions) |
 | `scripts/install-backbone-commands.sh` | Copy (or `--link`) backbone commands and helper scripts into project repos |
 | `scripts/backbone-sync.sh` | The only code that touches git; honors `transport=local\|git` |
-| `.claude/commands/backbone-*.md` | Backbone slash commands (8 commands) |
+| `.claude/commands/backbone.md`, `backbone-send.md`, `backbone-inbox.md`, `backbone-done.md` | The four backbone commands |
+| `.claude/commands/backbone-{publish,complete,join,leave,roster,subscribe,unsubscribe,update}.md` | Deprecated forwarding aliases (removed in 0.6.0) |
+| `docs/notify.md` | Notifier contract and the Radeas Chat example |
 | `.claude/commands/correction.md` | Capture lessons into `.claude/learnings.md` |
 | `.claude/commands/learning.md` | Alias for correction |
 

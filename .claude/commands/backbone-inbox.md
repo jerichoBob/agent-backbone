@@ -15,7 +15,8 @@ If `MISSING`: stop — `../agent-backbone/` is not accessible.
 Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
 
 ```bash
-SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
+SCRIPTS=.claude/scripts/backbone; [ -x "$SCRIPTS/backbone-sync.sh" ] || SCRIPTS=../agent-backbone/scripts
+SYNC="$SCRIPTS/backbone-sync.sh"; PRES="$SCRIPTS/backbone-presence.sh"
 bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
 ```
 
@@ -26,10 +27,15 @@ If `git`: run `bash "$SYNC" --dir ../agent-backbone pull` now, so the scan below
 
 ## Step 1: Identify this agent
 
-Read this session's presence record from `../agent-backbone/presence/`. If none exists:
-> "No presence record found. Run /backbone-join first — /backbone-inbox needs your registered name to filter messages."
+This session's name is the one the SessionStart hook printed (`backbone: N pending message(s) for <name>`). If it is not in your context, run `bash "$PRES" --dir ../agent-backbone me`. If that prints nothing, no session is registered: "No session registered. Run /backbone join first, /backbone-inbox needs your registered name to filter messages." and stop.
 
-Stop if not found. Extract `agent_name` and `subscriptions` (may be empty).
+A name looks like `stak-app:bob~ab12`: an **address** (`stak-app:bob`, what others send to) plus a per-session suffix. Read this session's record and the address's record to collect subscriptions:
+
+```bash
+bash "$PRES" --dir ../agent-backbone files "<session name>"     # the session's record and its address's record
+```
+
+Never build `presence-<name>.md` by hand: the filename is a Windows-safe label and the name is the `agent_name` field inside the file. Take `agent_name` and the union of `subscriptions` (may be empty).
 
 ## Step 2: Scan for pending messages
 
@@ -41,7 +47,7 @@ ls ../agent-backbone/messages/*-pending.md 2>/dev/null || echo "NONE"
 
 For each file returned, read its frontmatter. Include it if:
 
-- `routing: direct` AND (`to` == this agent's name OR `to` == `any`)
+- `routing: direct` AND (`to` == this agent's name OR `to` == its address (the name before any `~`, so `x:bob` reaches `x:bob~ab12`) OR `to` == `any`)
 - `routing: topic` AND this agent's `subscriptions` list contains the message's `topic`
 
 Apply optional filter: if `--type <type>` was passed, show only messages of that type.
@@ -54,7 +60,7 @@ If no messages found:
 
 ```
 No pending messages for {agent_name}.
-{if subscriptions empty: (You have no topic subscriptions — run /backbone-subscribe to add some.)}
+{if subscriptions empty: (You have no topic subscriptions — run /backbone subscribe <topic> to add some.)}
 ```
 
 Otherwise, group by type and display:
@@ -101,7 +107,7 @@ Type:    {type}
 
 {full message content}
 
-Work on this, then run /backbone-complete to close it out.
+Work on this, then run /backbone-done to close it out.
 ```
 
 ## Step 5: Spec Handover Protocol (for CR and task messages)

@@ -32,7 +32,7 @@ topic: backbone-meta
 
 ## Completion Notes
 
-When calling `/backbone-complete` on a claimed feedback message, write **Resolution** covering:
+When calling `/backbone-done` on a claimed feedback message, write **Resolution** covering:
 
 - What action was taken (fix committed, issue filed, question answered, deferred with reason)
 - Whether the issue is fully resolved or follow-on work remains
@@ -66,5 +66,5 @@ Show the matched topic next to each inbox item, e.g.:
 
 # Resolution
 
-<!-- filled in by maintainer via /backbone-complete -->
+<!-- filled in by maintainer via /backbone-done -->
 ```

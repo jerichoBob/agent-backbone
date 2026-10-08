@@ -16,7 +16,7 @@ This directory defines the schemas for all message types on the backbone. Each f
 ## How to Add a New Type
 
 1. Create `messages/types/{type-name}.md` using the template below
-2. That's it — `/backbone-publish` discovers types by scanning this directory
+2. That's it — `/backbone-send` discovers types by scanning this directory
 
 ### Type Schema Template
 
@@ -50,7 +50,7 @@ this type adds:
 
 ## Completion Notes
 
-What the receiver should write in the completion section before calling /backbone-complete.
+What the receiver should write in the completion section before calling /backbone-done.
 ```
 
 ---
@@ -85,7 +85,7 @@ Examples:
 cr-20260603-143022-pending.md
 cr-20260603-143022-claimed.md
 task-20260603-150000-pending.md
-task-20260603-150000-complete.md   ← moved to messages/archive/ by /backbone-complete
+task-20260603-150000-complete.md   ← moved to messages/archive/ by /backbone-done
 ```
 
 ## State Machine
@@ -95,7 +95,7 @@ All types share the same lifecycle:
 ```text
 pending
   └─► claimed      (/backbone-inbox — receiver claims)
-        └─► complete  (/backbone-complete — receiver closes, file moves to archive/)
+        └─► complete  (/backbone-done — receiver closes, file moves to archive/)
 ```
 
 Completed messages are moved to `messages/archive/` and never appear in `/backbone-inbox` scans.

@@ -41,7 +41,7 @@ stories:
 
 ## Completion
 
-When the receiver applies the updates and commits, call `/backbone-complete` and fill in
+When the receiver applies the updates and commits, call `/backbone-done` and fill in
 **Applied Notes** with the commit hash and any rows that were skipped (e.g. status was
 already correct).
 
@@ -78,5 +78,5 @@ side yet, just updating the shared burndown so the platform status page reflects
 
 # Applied Notes
 
-<!-- filled in by receiver via /backbone-complete -->
+<!-- filled in by receiver via /backbone-done -->
 ```

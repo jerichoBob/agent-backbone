@@ -7,8 +7,10 @@ This directory holds presence records for all agents currently registered on the
 ## File Naming Convention
 
 ```text
-presence-{agent_name}.md
+presence-{safe agent_name}.md
 ```
+
+The filename is a filesystem-safe label: `:` becomes `__` and the other characters Windows rejects (`/ \ * ? " < > |`) become `_`. The real name is the `agent_name` field inside the file, and every lookup scans that field (`scripts/backbone-presence.sh`), so nothing depends on the filename. Files created before v6 contain a colon and are renamed by `scripts/backbone-migrate-presence.sh`.
 
 One file per named agent. **Overwritten on re-join** — no accumulation of old records. Historical context lives in the `Learned` section of inactive records and in the `messages/` CR audit trail.
 
@@ -17,9 +19,9 @@ One file per named agent. **Overwritten on re-join** — no accumulation of old 
 Examples:
 
 ```text
-presence-grostak-api:patient-schema.md
-presence-stak-app:refill-flow.md
-presence-agent-backbone:maintainer.md
+presence-grostak-api__patient-schema.md
+presence-stak-app__refill-flow.md
+presence-agent-backbone__maintainer.md
 ```
 
 ---
@@ -46,7 +48,7 @@ capabilities:
 |-------|-------------|
 | `agent_name` | Unique identifier for this session. Format: `{repo-short}:{task-slug}` |
 | `repo` | Working directory name (e.g. `grostak-v2`) |
-| `status` | `active` = within TTL; `stale` = past TTL, not explicitly left; `inactive` = left via `/backbone-leave` |
+| `status` | `active` = within TTL; `stale` = past TTL, not explicitly left; `inactive` = left via `/backbone leave` |
 | `joined` | ISO timestamp when the agent registered |
 | `updated` | ISO timestamp of last frontmatter update |
 | `ttl_hours` | Hours until record is considered stale (default: 4) |
@@ -58,9 +60,9 @@ capabilities:
 
 | Section | Filled by | When |
 |---------|-----------|------|
-| **Current Task** | Agent on `/backbone-join` | Describes what this session is working on right now |
-| **Architectural Knowledge** | Agent on `/backbone-join` | What this agent knows about the system that peers would find useful |
-| **Learned** | Agent on `/backbone-leave` | Discoveries, decisions made, schema/API changes, open questions left behind |
+| **Current Task** | Agent on `/backbone join` | Describes what this session is working on right now |
+| **Architectural Knowledge** | Agent on `/backbone join` | What this agent knows about the system that peers would find useful |
+| **Learned** | Agent on `/backbone leave` | Discoveries, decisions made, schema/API changes, open questions left behind |
 
 ---
 
@@ -74,9 +76,9 @@ stale = (now - updated) > ttl_hours * 3600
 
 - **Active**: `updated` within `ttl_hours` and `status: active`
 - **Stale**: past TTL or `status` never set to `inactive` — agent may have abandoned the session
-- **Inactive**: `status: inactive` set explicitly via `/backbone-leave`
+- **Inactive**: `status: inactive` set explicitly via `/backbone leave`
 
-On `/backbone-join`, stale records are shown separately with a staleness warning. They are not deleted — the `Learned` section may still contain useful context.
+On `/backbone join`, stale records are shown separately with a staleness warning. They are not deleted — the `Learned` section may still contain useful context.
 
 ---
 
@@ -94,7 +96,7 @@ Use these tags in the `capabilities` list for consistent matching across session
 | `migrations` | Has written or reviewed DB migrations |
 | `test-infrastructure` | Knows the test setup and patterns |
 
-Free-form tags are fine too — these are just the most common ones. Consistent tags improve capability matching on `/backbone-join`.
+Free-form tags are fine too — these are just the most common ones. Consistent tags improve capability matching on `/backbone join`.
 
 ---
 
@@ -108,12 +110,12 @@ Some agent names are reserved by convention and carry special behavior:
 
 ### The Maintainer Pattern
 
-Any session working on the backbone itself (fixing bugs, implementing specs, triaging feedback) should join as `agent-backbone:maintainer`. `/backbone-join` suggests this name automatically when the working directory is `agent-backbone` and the task is maintenance-flavored.
+Any session working on the backbone itself (fixing bugs, implementing specs, triaging feedback) should join as `agent-backbone:maintainer`. `/backbone join` suggests this name automatically when the working directory is `agent-backbone` and the task is maintenance-flavored.
 
 When registered as `agent-backbone:maintainer`, the backbone acts as a first-class message recipient. Other agents across any repo can send feedback via:
 
 ```
-/backbone-publish --type feedback
+/backbone-send --type feedback
 ```
 
 The feedback message routes to `topic: backbone-meta`. The maintainer session sees it in `/backbone-inbox` because it is subscribed to that topic automatically.
@@ -124,6 +126,6 @@ The feedback message routes to `topic: backbone-meta`. The maintainer session se
 
 | Command | Action |
 |---------|--------|
-| `/backbone-join` | Register presence, see roster, get capability match hints |
-| `/backbone-roster` | See all agents (active, stale, recently inactive) |
-| `/backbone-leave` | Write learned summary, mark inactive |
+| `/backbone join` | Register presence, see roster, get capability match hints |
+| `/backbone status` | See all agents (active, stale, recently inactive) |
+| `/backbone leave` | Write learned summary, mark inactive |
