@@ -223,11 +223,11 @@ For the full architecture picture, see [`.claude/context-architecture-relationsh
 
 #### v0.5.0 (2026-10-08) — author: robert.w.seaton.jr@gmail.com
 
-- feat: pluggable notifier with `ask`/`auto` confirmation, per-project override, ping log and `docs/notify.md`; roster column renamed `notify`
-- feat: Windows-safe presence and seen-marker filenames, lookups scan `agent_name`, `backbone-migrate-presence.sh`
-- feat: SessionStart/SessionEnd hooks register and deregister sessions (`<address>~<suffix>` per session); consent-based hook installer
-- feat: commands collapsed to `/backbone`, `/backbone-send`, `/backbone-inbox`, `/backbone-done`; old names are aliases removed in 0.6.0
-- docs: toolkit survey and module boundary for the Phase 6 migration; Windows and live-exchange runbooks
+- feat: pluggable notifier with `ask`/`auto` confirmation, per-project override, ping log and `docs/notify.md`; roster column renamed `notify` [`0022c45`]
+- feat: Windows-safe presence and seen-marker filenames, lookups scan `agent_name`, `backbone-migrate-presence.sh` [`0022c45`]
+- feat: SessionStart/SessionEnd hooks register and deregister sessions (`<address>~<suffix>` per session); consent-based hook installer [`0022c45`]
+- feat: commands collapsed to `/backbone`, `/backbone-send`, `/backbone-inbox`, `/backbone-done`; old names are aliases removed in 0.6.0 [`000c01a`]
+- docs: toolkit survey and module boundary for the Phase 6 migration; Windows and live-exchange runbooks [`01cec29`]
 
 #### v0.4.0 (2026-10-07) — author: robert.w.seaton.jr@gmail.com
 
