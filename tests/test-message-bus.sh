@@ -9,7 +9,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MESSAGES_DIR="$ROOT/messages"
 TYPES_DIR="$ROOT/messages/types"
 ARCHIVE_DIR="$ROOT/messages/archive"
-COMMANDS_DIR="$ROOT/.claude/commands"
+source "$ROOT/tests/module-path.sh"
+COMMANDS_DIR="$BB_MODULE/skills"
 TMP_DIR="$(mktemp -d)"
 PASS=0
 FAIL=0
@@ -241,14 +242,10 @@ done
 # ── Test 8: Command files ─────────────────────────────────────────────────────
 echo ""
 echo "8. Command files"
-assert_file_exists "$COMMANDS_DIR/backbone-publish.md"     "/backbone-publish exists"
 assert_file_exists "$COMMANDS_DIR/backbone-inbox.md"       "/backbone-inbox exists"
 assert_file_exists "$COMMANDS_DIR/backbone.md"             "/backbone exists"
 assert_file_exists "$COMMANDS_DIR/backbone-send.md"        "/backbone-send exists"
 assert_file_exists "$COMMANDS_DIR/backbone-done.md"        "/backbone-done exists"
-assert_file_exists "$COMMANDS_DIR/backbone-subscribe.md"   "/backbone-subscribe exists"
-assert_file_exists "$COMMANDS_DIR/backbone-unsubscribe.md" "/backbone-unsubscribe exists"
-assert_file_exists "$COMMANDS_DIR/backbone-complete.md"    "/backbone-complete exists"
 
 # ── Test 9: Backward compat — cr-* v1 files ──────────────────────────────────
 echo ""

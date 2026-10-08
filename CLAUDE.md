@@ -13,7 +13,8 @@ It holds no application code. Its role is shared context, cross-project slash co
 
 ## What lives here
 
-- `.claude/commands/` — backbone slash commands (publish, inbox, join, leave, complete, subscribe, etc.)
+- The backbone commands and scripts are **not here**: they are the `backbone` module of `../aidev-toolkit/` (`modules/backbone/{scripts,skills,templates}`), installed globally by `/aid-update` and called by absolute path under `~/.claude/aidev-toolkit/modules/backbone/`. This repo holds protocol and state.
+- `.claude/commands/` — `correction` and `learning` only
 - `messages/` — active message bus (pending and claimed messages)
 - `messages/types/` — message type registry (cr, task, and future types)
 - `messages/archive/` — completed messages (moved here by /backbone-done)
@@ -21,9 +22,8 @@ It holds no application code. Its role is shared context, cross-project slash co
 - `.claude/context-architecture-relationship.md` — canonical explanation of how grostak-v2 and stak-app relate
 - `.claude/learnings.md` — captured lessons and correction rules (read before doing anything non-trivial)
 - `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
-- `scripts/` — install script plus the v5 git-transport helpers (`backbone-sync.sh`, `backbone-poll.sh`, `backbone-session-start.sh`, `backbone-session-end.sh`, `backbone-install-hooks.sh`, `backbone-ack-check.sh`, `backbone-notify.sh`, `backbone-secret-check.sh`, `backbone-roster-lookup.sh`, `backbone-presence.sh`, `backbone-name.sh`, `backbone-migrate-presence.sh`)
 - `docs/git-transport.md` — how to run the backbone over git (opt-in via `transport=git` in `backbone.config`; default is local disk)
-- `tests/` — lifecycle tests (backbone-workflow 46, message-bus 50, presence-lifecycle 71, git-transport 246, commands 113 — all passing)
+- `tests/` — protocol and state tests (workflow 38, message-bus 46, presence docs 12, repo-docs 15 — all passing); the tooling tests live in aidev-toolkit
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -44,14 +44,14 @@ The cross-project coordination problem: schema changes on the platform side requ
 
 The SessionStart/SessionEnd hooks (optional, installed only with consent) register and deregister sessions. The old names (`/backbone-publish`, `-complete`, `-join`, `-leave`, `-roster`, `-subscribe`, `-unsubscribe`, `-update`) are forwarding aliases removed in 0.6.0.
 
-Install commands into a project repo: `bash ../agent-backbone/scripts/install-backbone-commands.sh`
+Install: `/aid-update` (installs the module), then `/backbone-setup` in a project (clone check, optional hooks).
 
 ## Development workflow
 
 When working on this repo:
 
 1. **Specs first** — see `specs/README.md` for the tracker. Each spec has phases and tasks.
-2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh && bash tests/test-git-transport.sh && bash tests/test-commands.sh` before marking tasks complete.
+2. **Tests after implementation** — run `for t in tests/test-*.sh; do bash $t; done` here, and `bash tests/test-backbone-git-transport.sh && bash tests/test-backbone-presence.sh && bash tests/test-backbone-commands.sh` in `../aidev-toolkit`, before marking tasks complete.
 3. **Update docs** — keep README.md and specs/README.md in sync with code changes.
 
 ## File purposes
@@ -64,15 +64,12 @@ When working on this repo:
 | `messages/archive/` | Completed messages (moved by /backbone-done) |
 | `presence/` | Agent registry (active/stale/inactive agents) |
 | `specs/README.md` | Progress tracker for all specs (v1-v4) |
-| `tests/test-backbone-workflow.sh` | Backbone workflow test (46 assertions) |
-| `tests/test-message-bus.sh` | Generic bus test (50 assertions) |
-| `tests/test-presence-lifecycle.sh` | Presence test (71 assertions: safe names, agent_name lookups, migration) |
-| `tests/test-git-transport.sh` | Git transport, notifier, session hooks, secret check, install (246 assertions; real git, two clones) |
-| `tests/test-commands.sh` | Command integrity: scripts named exist, aliases forward, installer ships everything (113 assertions) |
-| `scripts/install-backbone-commands.sh` | Copy (or `--link`) backbone commands and helper scripts into project repos |
-| `scripts/backbone-sync.sh` | The only code that touches git; honors `transport=local\|git` |
-| `.claude/commands/backbone.md`, `backbone-send.md`, `backbone-inbox.md`, `backbone-done.md` | The four backbone commands |
-| `.claude/commands/backbone-{publish,complete,join,leave,roster,subscribe,unsubscribe,update}.md` | Deprecated forwarding aliases (removed in 0.6.0) |
+| `tests/test-backbone-workflow.sh` | Backbone workflow test (38 assertions) |
+| `tests/test-message-bus.sh` | Generic bus test (46 assertions) |
+| `tests/test-presence-lifecycle.sh` | This repo's presence docs and example record (12 assertions) |
+| `tests/module-path.sh` | Finds the backbone module (`$BACKBONE_MODULE`, installed, or sibling `../aidev-toolkit`); tests are BLOCKED, not faked, without it |
+| `tests/test-repo-docs.sh` | Protocol docs, git-ignore rules for local state, no tooling copy left here (15 assertions) |
+| `../aidev-toolkit/modules/backbone/` | The tooling (scripts, the five commands, templates) and its tests: `test-backbone-git-transport.sh` (226), `test-backbone-presence.sh` (57), `test-backbone-commands.sh` (77), real git, no mocks |
 | `docs/notify.md` | Notifier contract and the Radeas Chat example |
 | `.claude/commands/correction.md` | Capture lessons into `.claude/learnings.md` |
 | `.claude/commands/learning.md` | Alias for correction |

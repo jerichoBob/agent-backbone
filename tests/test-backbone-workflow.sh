@@ -7,8 +7,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MESSAGES_DIR="$ROOT/messages"
-COMMANDS_DIR="$ROOT/.claude/commands"
-SCRIPTS_DIR="$ROOT/scripts"
+source "$ROOT/tests/module-path.sh"
+COMMANDS_DIR="$BB_MODULE/skills"
 TMP_DIR="$(mktemp -d)"
 PASS=0
 FAIL=0
@@ -175,17 +175,10 @@ done
 # ── Test 6: Command files ─────────────────────────────────────────────────────
 echo ""
 echo "6. Command files"
-assert_file_exists "$COMMANDS_DIR/backbone-join.md"        "/backbone-join exists"
-assert_file_exists "$COMMANDS_DIR/backbone-leave.md"       "/backbone-leave exists"
-assert_file_exists "$COMMANDS_DIR/backbone-roster.md"      "/backbone-roster exists"
-assert_file_exists "$COMMANDS_DIR/backbone-publish.md"     "/backbone-publish exists"
 assert_file_exists "$COMMANDS_DIR/backbone-inbox.md"       "/backbone-inbox exists"
 assert_file_exists "$COMMANDS_DIR/backbone.md"             "/backbone exists"
 assert_file_exists "$COMMANDS_DIR/backbone-send.md"        "/backbone-send exists"
 assert_file_exists "$COMMANDS_DIR/backbone-done.md"        "/backbone-done exists"
-assert_file_exists "$COMMANDS_DIR/backbone-complete.md"    "/backbone-complete exists"
-assert_file_exists "$COMMANDS_DIR/backbone-subscribe.md"   "/backbone-subscribe exists"
-assert_file_exists "$COMMANDS_DIR/backbone-unsubscribe.md" "/backbone-unsubscribe exists"
 assert_not_exists  "$COMMANDS_DIR/cr-send.md"              "cr-send removed"
 assert_not_exists  "$COMMANDS_DIR/cr-inbox.md"             "cr-inbox removed"
 assert_not_exists  "$COMMANDS_DIR/cr-ready.md"             "cr-ready removed"
@@ -194,9 +187,8 @@ assert_not_exists  "$COMMANDS_DIR/cr-done.md"              "cr-done removed"
 # ── Test 7: Install script ────────────────────────────────────────────────────
 echo ""
 echo "7. Install script"
-assert_file_exists "$SCRIPTS_DIR/install-backbone-commands.sh" "install-backbone-commands.sh exists"
-assert_not_exists  "$SCRIPTS_DIR/install-cr-commands.sh"       "install-cr-commands.sh removed"
-assert_contains    "$SCRIPTS_DIR/install-backbone-commands.sh" "backbone-\*.md" "script globs backbone-*.md"
+assert_not_exists  "$ROOT/scripts/install-cr-commands.sh"          "install-cr-commands.sh removed"
+assert_not_exists  "$ROOT/scripts/install-backbone-commands.sh"     "per-project installer removed (tooling is installed once by aidev-toolkit)"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""

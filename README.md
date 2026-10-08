@@ -60,14 +60,15 @@ agent-backbone/
 │   ├── spec-v1-a2a-coordination-backbone.md
 │   ├── spec-v2-agent-presence-and-discovery.md
 │   └── spec-v3-generic-message-bus.md
-├── scripts/           # Installation and setup utilities
-│   └── install-backbone-commands.sh
-├── tests/             # Lifecycle and workflow tests
-│   ├── test-cr-workflow.sh
+├── docs/              # git transport, notifier, live-exchange and verification runbooks
+├── tests/             # Protocol and state tests (tooling tests live in aidev-toolkit)
+│   ├── test-backbone-workflow.sh
 │   ├── test-message-bus.sh
-│   └── test-presence-lifecycle.sh
+│   ├── test-presence-lifecycle.sh
+│   ├── test-repo-docs.sh
+│   └── module-path.sh
 ├── .claude/
-│   ├── commands/      # Backbone slash commands (install these to your project repos)
+│   ├── commands/      # correction/learning only; the backbone commands ship in aidev-toolkit
 │   ├── context-architecture-relationship.md  # How grostak-v2 and stak-app relate
 │   ├── dev-environment-setup.md              # One-time Clerk + tenant setup
 │   └── learnings.md                          # Hard-won lessons
@@ -113,7 +114,7 @@ These commands are installed into your project repos (grostak-v2, stak-app, etc.
 
 ### Sessions register themselves
 
-With the optional hooks installed (`install-backbone-commands.sh <repo> --hooks`, which shows what it adds and asks first), a SessionStart hook registers your session, prints the pending count first, and tells the agent to start the watcher; a SessionEnd hook marks it inactive. You never type `/backbone join`. Writing the "Learned" summary still needs `/backbone leave`, because a hook cannot do that.
+With the optional hooks installed (`backbone-install-hooks.sh <project>`, which shows what it adds and asks first), a SessionStart hook registers your session, prints the pending count first, and tells the agent to start the watcher; a SessionEnd hook marks it inactive. You never type `/backbone join`. Writing the "Learned" summary still needs `/backbone leave`, because a hook cannot do that.
 
 **Identity.** Your *address* (`stak-app:bob`) is what others send to; each session is `address~ab12`, so several of your sessions never collide, and a message to the address reaches all of them (the first to claim wins). Without `agent=` in `backbone.config` the address is `<repo>:<git user.name>`; with no git user the hook refuses rather than share a name. Presence filenames use `__` for `:` so Windows can create them; the real name is the `agent_name` inside the file.
 
@@ -123,13 +124,17 @@ When a direct message goes unacknowledged for 5 minutes, the sender's session pi
 
 ### Installation
 
-From any project repo:
+The commands and scripts are the `backbone` module of [aidev-toolkit](https://github.com/jerichoBob/aidev-toolkit), installed once by `/aid-update` and called by absolute path under `~/.claude/aidev-toolkit/modules/backbone/`. Nothing is copied into your projects. This repo holds the state and the protocol: messages, presence, roster, message-type schemas, specs and runbooks.
 
-```bash
-bash ../agent-backbone/scripts/install-backbone-commands.sh
+From any project repo, in a Claude Code session:
+
+```text
+/backbone-setup
 ```
 
-This installs `.claude/commands/backbone*.md` and the helper scripts from agent-backbone into your repo's `.claude/` directory. Add `--hooks` to be offered the session hooks (it asks before changing `settings.json`).
+It clones this repo as `../agent-backbone` if missing, checks the module is installed, and offers the session hooks (it asks before changing `settings.json`). To add the hooks directly: `bash ~/.claude/aidev-toolkit/modules/backbone/scripts/backbone-install-hooks.sh <project>`.
+
+**Upgrading a project that has the old per-project copies:** re-run the hook installer, then delete `.claude/scripts/backbone/`, `.claude/.backbone-copied` and the project's `.claude/commands/backbone*.md` (project copies override the global ones until removed).
 
 ---
 

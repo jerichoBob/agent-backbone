@@ -27,7 +27,7 @@ The tooling repo ignores `messages/*` (except `README.md` and `types/`); the mes
 
 ## Scripts
 
-Installed into each project at `.claude/scripts/backbone/` by `scripts/install-backbone-commands.sh`.
+These live in aidev-toolkit's `backbone` module and are called by absolute path, `~/.claude/aidev-toolkit/modules/backbone/scripts/<script>`, installed once by `/aid-update`. Nothing is copied into projects. Scripts find the backbone with `--dir` or `BACKBONE_DIR`, defaulting to `../agent-backbone`.
 
 | Script | Purpose |
 | --- | --- |
@@ -42,10 +42,10 @@ Installed into each project at `.claude/scripts/backbone/` by `scripts/install-b
 
 ### Session hooks
 
-The hooks are installed with `bash scripts/install-backbone-commands.sh <project> --hooks`, or on their own:
+The hooks are offered by `/backbone-setup`, or installed on their own:
 
 ```bash
-bash ../agent-backbone/scripts/backbone-install-hooks.sh <project>
+bash ~/.claude/aidev-toolkit/modules/backbone/scripts/backbone-install-hooks.sh <project>
 ```
 
 It shows exactly what it will add to `.claude/settings.json`, keeps every existing setting and hook, saves the old file as `settings.json.bak-backbone`, and changes nothing without your yes. Equivalent by hand:
@@ -53,8 +53,8 @@ It shows exactly what it will add to `.claude/settings.json`, keeps every existi
 ```json
 {
   "hooks": {
-    "SessionStart": [ { "hooks": [ { "type": "command", "command": "bash .claude/scripts/backbone/backbone-session-start.sh --dir ../agent-backbone" } ] } ],
-    "SessionEnd":   [ { "hooks": [ { "type": "command", "command": "bash .claude/scripts/backbone/backbone-session-end.sh --dir ../agent-backbone" } ] } ]
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "bash ~/.claude/aidev-toolkit/modules/backbone/scripts/backbone-session-start.sh --dir ../agent-backbone" } ] } ],
+    "SessionEnd":   [ { "hooks": [ { "type": "command", "command": "bash ~/.claude/aidev-toolkit/modules/backbone/scripts/backbone-session-end.sh --dir ../agent-backbone" } ] } ]
   }
 }
 ```
@@ -111,4 +111,4 @@ like access to a shared inbox that agents read:
 
 ## Testing
 
-`bash tests/test-git-transport.sh` — real git, two clones of a local bare repo, no mocks.
+In aidev-toolkit: `bash tests/test-backbone-git-transport.sh` — real git, two clones of a local bare repo, no mocks. In this repo, `bash tests/test-repo-docs.sh` checks the protocol documents and ignore rules. `.claude/scripts/rehearse-live-exchange.sh` and `.claude/scripts/e2e-check-hooks.sh` run the Bob and Nate exchange and the hook install end to end on one machine.
