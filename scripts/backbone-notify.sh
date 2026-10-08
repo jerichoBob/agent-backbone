@@ -14,6 +14,7 @@
 #   BACKBONE_NOTIFY_ID      message id
 #
 # Usage: backbone-notify.sh [--dir DIR] --target TARGET --from AGENT --title TEXT --id <type-id>
+# Each attempt is logged to <dir>/.claude/data/backbone/pings.log (time, result, target, id; never the body).
 # Exit: 0 sent · 1 notifier ran and failed · 3 no notifier configured (nothing attempted) · 4 usage
 set -uo pipefail
 
@@ -45,10 +46,23 @@ if [[ -z "$CMD" ]]; then
   exit 3
 fi
 
+# log_attempt <result> — one tab-separated line per attempt: time, result, target, id.
+# Never the title or text, so a log can be shared without leaking message content. A logging
+# failure is reported but never changes the notifier's result.
+log_attempt() {
+  local logdir="$DIR/.claude/data/backbone" safe_target safe_id
+  safe_target="$(printf '%s' "$TARGET" | tr -d '\r\n\t')"
+  safe_id="$(printf '%s' "$ID" | tr -d '\r\n\t')"
+  { mkdir -p "$logdir" && printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$safe_target" "$safe_id" >> "$logdir/pings.log"; } 2>/dev/null \
+    || echo "backbone-notify: could not write $logdir/pings.log" >&2
+}
+
 TEXT="$FROM sent you \"$TITLE\" on the backbone ($ID)"
 if BACKBONE_NOTIFY_TARGET="$TARGET" BACKBONE_NOTIFY_TEXT="$TEXT" BACKBONE_NOTIFY_FROM="$FROM" \
    BACKBONE_NOTIFY_TITLE="$TITLE" BACKBONE_NOTIFY_ID="$ID" bash -c "$CMD"; then
+  log_attempt sent
   exit 0
 fi
+log_attempt failed
 echo "backbone-notify: notifier failed for $ID" >&2
 exit 1

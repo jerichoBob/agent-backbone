@@ -8,3 +8,6 @@ messages/*
 # Per-machine transport setting (see docs/git-transport.md).
 backbone.config
 .claude/handoffs/*
+
+# Per-machine ping log (see docs/notify.md).
+.claude/data/backbone/

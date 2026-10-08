@@ -49,15 +49,47 @@ bb_fm_list() {
     }'
 }
 
-# bb_agent_subs <dir> <agent> — print the agent's topic subscriptions from its presence record
-bb_agent_subs() {
-  local f="$1/presence/presence-$2.md"
-  [[ -f "$f" ]] && bb_fm_list subscriptions < "$f"
+# bb_safe_name <name> — filesystem-safe form of an agent name. No character Windows rejects
+# (: / \ * ? " < > |) survives: ":" becomes "__", the rest become "_". "~" is allowed.
+# Names are display data; lookups scan agent_name in the file and never depend on this form.
+bb_safe_name() { printf '%s' "$1" | sed -e 's/:/__/g' -e 's#[/\\*?"<>|]#_#g'; }
+
+# bb_address <agent> — the stable address of a session: "x:bob~ab12" -> "x:bob". An address has no suffix.
+bb_address() { printf '%s' "${1%%~*}"; }
+
+# bb_presence_files <dir> <agent> — print presence records belonging to <agent>, found by scanning agent_name.
+# A session name ("x:bob~ab12") matches its own record and the record named by its address ("x:bob", e.g.
+# one made by /backbone-join). An address (no "~") matches its own record and every "<address>~<suffix>" session.
+bb_presence_files() {
+  local dir="$1" agent="$2" addr f name
+  addr="$(bb_address "$agent")"
+  for f in "$dir"/presence/presence-*.md; do
+    [[ -f "$f" ]] || continue
+    name="$(bb_fm_get agent_name < "$f")"
+    if [[ "$name" == "$agent" || "$name" == "$addr" || ( "$agent" != *"~"* && "$name" == "$agent~"* ) ]]; then echo "$f"; fi
+  done
   return 0
 }
 
-# bb_safe_name <agent> — filesystem-safe form of an agent name (colons break on Windows)
-bb_safe_name() { echo "$1" | tr ':/\\' '___'; }
+# bb_presence_path <dir> <agent> — the path to read or write for <agent>'s own record: the existing
+# record whose agent_name is exactly <agent>, else presence/presence-<safe name>.md for a new one.
+bb_presence_path() {
+  local dir="$1" agent="$2" f
+  for f in "$dir"/presence/presence-*.md; do
+    [[ -f "$f" ]] || continue
+    if [[ "$(bb_fm_get agent_name < "$f")" == "$agent" ]]; then echo "$f"; return 0; fi
+  done
+  echo "$dir/presence/presence-$(bb_safe_name "$agent").md"
+}
+
+# bb_agent_subs <dir> <agent> — print the agent's topic subscriptions (all its sessions' records if <agent> is an address)
+bb_agent_subs() {
+  local f
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && bb_fm_list subscriptions < "$f"
+  done < <(bb_presence_files "$1" "$2")
+  return 0
+}
 
 # bb_for_agent <agent> <subs-newline-list> — stdin is a message; exit 0 if it is addressed to the agent
 bb_for_agent() {
@@ -66,7 +98,7 @@ bb_for_agent() {
   routing="$(bb_fm_get routing <<<"$fm")"
   to="$(bb_fm_get to <<<"$fm")"
   topic="$(bb_fm_get topic <<<"$fm")"
-  if [[ "$routing" == "direct" && ( "$to" == "$agent" || "$to" == "any" ) ]]; then return 0; fi
+  if [[ "$routing" == "direct" && ( "$to" == "$agent" || "$to" == "$(bb_address "$agent")" || "$to" == "any" ) ]]; then return 0; fi
   if [[ "$routing" == "topic" && -n "$topic" ]] && grep -qxF "$topic" <<<"$subs"; then return 0; fi
   return 1
 }
@@ -138,3 +170,26 @@ bb_notify_confirm() {
     *) echo "backbone: invalid notify_confirm '$v' in $dir/backbone.config (expected ask or auto)" >&2; return 4 ;;
   esac
 }
+
+# bb_now — current UTC time, ISO 8601
+bb_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# bb_fm_set <file> <key> <value> — set a scalar frontmatter key, replacing it if present, else adding it
+# as the last frontmatter line. Writes through a temp file, so it behaves the same on macOS and GNU.
+bb_fm_set() {
+  local f="$1" k="$2" v="$3" tmp
+  tmp="$(mktemp "${f}.XXXXXX")" || return 1
+  awk -v k="$k" -v v="$v" '
+    /^---[ \t\r]*$/ { n++; if (n == 2 && !done) { print k ": " v; done = 1 } print; next }
+    n == 1 && index($0, k ":") == 1 { print k ": " v; done = 1; next }
+    { print }' "$f" > "$tmp" && mv "$tmp" "$f" || { rm -f "$tmp"; return 1; }
+}
+
+# bb_slug <text> — lowercase, runs of non-alphanumerics become "-", trimmed
+bb_slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//'; }
+
+# bb_random_suffix — 4 random lowercase letters/digits (random, not a counter: two machines never collide before they sync)
+bb_random_suffix() { LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom 2>/dev/null | head -c 4; }
+
+# bb_session_file <dir> <key> — machine-local file remembering which session name a Claude session registered as
+bb_session_file() { printf '%s/.claude/data/backbone/sessions/%s' "$1" "$(printf '%s' "$2" | tr -c 'A-Za-z0-9_-' '_')"; }

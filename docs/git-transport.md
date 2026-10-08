@@ -9,7 +9,7 @@ Create `backbone.config` in the backbone directory (it is per machine and never 
 
 ```text
 transport=git          # local (default) | git
-agent=stak-app:main    # optional: the name the SessionStart hook counts messages for
+agent=stak-app:bob     # optional: your address; without it the hook uses <repo>:<git user.name>
 ```
 
 | Setting | Behavior |
@@ -32,24 +32,38 @@ Installed into each project at `.claude/scripts/backbone/` by `scripts/install-b
 | Script | Purpose |
 | --- | --- |
 | `backbone-sync.sh [--dir D] mode\|pull\|push <action> <id>` | The only code that touches git. Exit 0 ok, 2 remote unreachable, 3 lost a race, 4 config error. |
-| `backbone-session-start.sh` | SessionStart hook: pull, print the pending count first, write seen markers. |
+| `backbone-session-start.sh` | SessionStart hook: pull, register this session's presence, print the pending count first, write seen markers, tell the agent to start the watcher. |
+| `backbone-session-end.sh` | SessionEnd hook: mark this session's presence inactive and push it. |
+| `backbone-install-hooks.sh <project>` | Merge both hooks into the project's `settings.json`. Asks first; `--dry-run` shows the change; `--yes` skips the question. |
 | `backbone-poll.sh` | Run under Monitor: silent while idle, one line and exit on a new addressed message. |
+| `backbone-presence.sh` | Find presence records by `agent_name` (`path`, `files`, `me`, `safe`). |
+| `backbone-migrate-presence.sh` | Rename old colon-named presence files (`--dry-run` first; keeps git history). |
+| `backbone-name.sh` | Show, set or unset the `agent=` address. |
 
-### SessionStart hook
+### Session hooks
 
-Add to the project's `.claude/settings.json` (not installed automatically):
+The hooks are installed with `bash scripts/install-backbone-commands.sh <project> --hooks`, or on their own:
+
+```bash
+bash ../agent-backbone/scripts/backbone-install-hooks.sh <project>
+```
+
+It shows exactly what it will add to `.claude/settings.json`, keeps every existing setting and hook, saves the old file as `settings.json.bak-backbone`, and changes nothing without your yes. Equivalent by hand:
 
 ```json
 {
   "hooks": {
-    "SessionStart": [
-      { "hooks": [ { "type": "command", "command": "bash .claude/scripts/backbone/backbone-session-start.sh --dir ../agent-backbone" } ] }
-    ]
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "bash .claude/scripts/backbone/backbone-session-start.sh --dir ../agent-backbone" } ] } ],
+    "SessionEnd":   [ { "hooks": [ { "type": "command", "command": "bash .claude/scripts/backbone/backbone-session-end.sh --dir ../agent-backbone" } ] } ]
   }
 }
 ```
 
-Set `BACKBONE_AGENT` (or `agent=` in `backbone.config`) so the hook knows whose messages to count.
+Both hooks always exit 0 and print a reason instead of failing, so they can never block a session. The pending count is always the first line printed.
+
+**Names.** `agent=` (or `BACKBONE_AGENT`) sets your *address*, the stable name others send to. Without it the hook uses `<repo>:<slug of git user.name>` and says it inferred it; with no git user it refuses to register rather than give everyone sharing the repo one identity. Each session registers as `<address>~<4 random chars>`, so one person can run several sessions: a message to the address reaches all of them and the atomic claim decides which acts, while a message to a full session name reaches only that one.
+
+**Windows.** Presence and seen-marker filenames never contain `: / \ * ? " < > |` (`:` becomes `__`); the real name is the `agent_name` field inside the file. Repos with older colon-named files run `bash scripts/backbone-migrate-presence.sh --dry-run`, then without `--dry-run`, then commit the staged renames.
 
 ## Knowing a message arrived
 
@@ -57,20 +71,21 @@ Set `BACKBONE_AGENT` (or `agent=` in `backbone.config`) so the hook knows whose 
 | --- | --- |
 | starting a session | `backbone-session-start.sh` prints the pending count first |
 | in an open session | `backbone-poll.sh` under Monitor wakes the agent (30 s interval, no tokens while idle) |
-| away | after 5 minutes with no ack, the sender's session pings the receiver's human on Google Chat |
+| away | after 5 minutes with no ack, the sender's session pings the receiver's human through the configured notifier (see [notify.md](notify.md)) |
 
 An ack is a claim or a `seen` marker (`messages/seen/<type>-<id>.<agent>`), which the hook and the poll write
 and push. The ping carries sender and title only. Who to ping comes from `roster.md` at the backbone root,
-edited by hand (rows may use globs, see `scripts/backbone-roster-lookup.sh`):
+edited by hand (rows may use globs, see `scripts/backbone status-lookup.sh`):
 
 ```text
-| agent      | human | gchat           |
+| agent      | human | notify          |
 | ---------- | ----- | --------------- |
 | stak-app:* | Bob   | bob@example.com |
 ```
 
 The sender's session must stay open for the timer to fire. `backbone-ack-check.sh` is the timer; the
-`/gchat` send itself happens in the sender's Claude session, not in the script.
+send itself goes through `backbone-notify.sh` and whatever `notify_command=` names; the `notify` column is an opaque target
+for that command (for Radeas, a Chat space ID, not an email).
 
 ## Claiming over git
 
@@ -91,7 +106,7 @@ like access to a shared inbox that agents read:
   the way to make it verifiable, and are not enforced by these scripts.
 - Agents treat message content as untrusted requests (see `CONVENTIONS.md`), so a hostile message cannot
   run anything without a human approving it. This is a second layer, not a substitute for the first.
-- `/backbone-publish` refuses bodies that look like secrets (`scripts/backbone-secret-check.sh`). It is a
+- `/backbone-send` refuses bodies that look like secrets (`scripts/backbone-secret-check.sh`). It is a
   pattern check, not a guarantee. If a secret does get pushed, rotate it; deleting the message does not remove it from git history.
 
 ## Testing

@@ -26,6 +26,7 @@ assert_eq() { if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (expected '$2
 assert_file() { if [[ -f "$1" ]]; then pass "$2"; else fail "$2 (missing: $1)"; fi; }
 assert_no_file() { if [[ ! -f "$1" ]]; then pass "$2"; else fail "$2 (should not exist: $1)"; fi; }
 assert_contains() { if grep -q -- "$2" "$1" 2>/dev/null; then pass "$3"; else fail "$3 (pattern '$2' not in $1)"; fi; }
+assert_match() { if [[ "$1" =~ $2 ]]; then pass "$3"; else fail "$3 (got '$1', wanted /$2/)"; fi; }
 
 # make_msg <dir> <type> <id> <to>   — write a pending direct message
 make_msg() {
@@ -179,27 +180,28 @@ echo ""
 echo "6. SessionStart pending count (AC-4)"
 new_world
 SESSION="$ROOT/scripts/backbone-session-start.sh"
-printf -- '---\nagent_name: b:main\nsubscriptions:\n  - schema-changes\n---\n' > "$B/presence/presence-b:main.md"
+printf -- '---\nagent_name: b:main\nsubscriptions:\n  - schema-changes\n---\n' > "$B/presence/presence-b__main.md"
 make_msg "$A" task 601 "b:main"
 make_msg "$A" task 602 "a:main"
 make_msg "$A" task 603 "any"
 make_topic_msg "$A" task 604 "schema-changes"
 make_topic_msg "$A" task 605 "unsubscribed-topic"
 "$SYNC" --dir "$A" push publish task-601 >/dev/null
-out="$("$SESSION" --dir "$B" --agent "b:main")"; rc=$?
+out="$("$SESSION" --dir "$B" --agent "b:main" --key t6 </dev/null)"; rc=$?
 assert_eq "$rc" "0" "session-start exits 0"
-assert_eq "$(head -1 <<<"$out")" "backbone: 3 pending message(s) for b:main" "count is the first output line (direct + any + subscribed topic)"
+assert_match "$(head -1 <<<"$out")" '^backbone: 3 pending message\(s\) for b:main~[a-z0-9]{4}$' "count is the first output line (direct + any + subscribed topic)"
 assert_eq "$(grep -c 'task-60[134]' <<<"$out")" "3" "lists the three addressed messages"
 assert_eq "$(grep -c 'task-60[25]' <<<"$out")" "0" "does not list messages for other agents or unsubscribed topics"
 assert_file "$B/messages/task-601-pending.md" "session-start pulled the messages from the remote"
 "$SYNC" --dir "$A" pull
-assert_file "$A/messages/seen/task-601.b_main" "seen marker reached the sender via git"
-assert_file "$A/messages/seen/task-604.b_main" "seen marker written for the topic message too"
-out="$(BACKBONE_AGENT= "$SESSION" --dir "$B")"; rc=$?
+assert_match "$(ls "$A/messages/seen")" 'task-601\.b__main~[a-z0-9]{4}' "seen marker reached the sender via git"
+assert_match "$(ls "$A/messages/seen")" 'task-604\.b__main~[a-z0-9]{4}' "seen marker written for the topic message too"
+mkdir -p "$TMP_DIR/noproj"
+out="$(BACKBONE_AGENT= "$SESSION" --dir "$B" --project "$TMP_DIR/noproj" --key t6b </dev/null)"; rc=$?
 assert_eq "$rc" "0" "session-start without an agent name still exits 0"
 assert_contains <(echo "$out") "no agent name" "...and says why the count was skipped"
 echo "agent=b:main" >> "$B/backbone.config"
-assert_eq "$("$SESSION" --dir "$B" | head -1)" "backbone: 3 pending message(s) for b:main" "agent= in backbone.config is honored"
+assert_match "$("$SESSION" --dir "$B" --key t6c </dev/null | head -1)" '^backbone: 3 pending message\(s\) for b:main~' "agent= in backbone.config is honored"
 
 # ── 7. Poll (AC-5) ────────────────────────────────────────────────────────────
 echo ""
@@ -225,7 +227,7 @@ assert_eq "$rc" "0" "poll exits 0 when an addressed message arrives"
 assert_eq "$(wc -l < "$TMP_DIR/poll.out" | tr -d ' ')" "1" "poll printed exactly one line"
 assert_contains "$TMP_DIR/poll.out" "task-702 from sender:main: Test message 702" "line names the message, sender, and title"
 "$SYNC" --dir "$A" pull
-assert_file "$A/messages/seen/task-702.b_main" "poll hit wrote and pushed the seen marker"
+assert_file "$A/messages/seen/task-702.b__main" "poll hit wrote and pushed the seen marker"
 
 # ── 8. Agent-to-human map ─────────────────────────────────────────────────────
 echo ""
@@ -236,7 +238,7 @@ assert_eq "$("$LOOKUP" --dir "$A" "b:main"; echo "rc=$?")" "rc=1" "no roster.md 
 cat > "$A/roster.md" <<'EOF'
 # Roster
 
-| agent | human | gchat |
+| agent | human | notify |
 | ----- | ----- | ----- |
 | `a:*` | Bob | bob@example.com |
 | b:* | Nate | nate@example.com |
@@ -251,9 +253,10 @@ echo ""
 echo "9. No-ack ping after the timeout (AC-6)"
 ACK="$ROOT/scripts/backbone-ack-check.sh"
 ackcmd() { "$ACK" --dir "$A" --id "$1" --to "b:main" --from "a:main" --title "Test message ${1#task-}" --interval 1 "${@:2}"; }
+echo "notify_command=true" >> "$A/backbone.config"   # a notifier must exist for the timer to ping (AC-4)
 make_msg "$A" task 900 "b:main"; "$SYNC" --dir "$A" push publish task-900 >/dev/null
 out="$(ackcmd task-900 --timeout 2)"; rc=$?
-assert_eq "$rc" "10" "no ack within the timeout exits 10"
+assert_eq "$rc" "10" "no ack within the timeout exits 10 (ask is the default)"
 assert_eq "$out" 'PING Nate|nate@example.com :: a:main sent you "Test message 900" on the backbone (task-900)' "ping names sender and title"
 if grep -q "Body of" <<<"$out"; then fail "ping must not contain the message body"; else pass "ping contains no message body"; fi
 out="$(cd "$A" && mv roster.md roster.md.off && "$ACK" --dir "$A" --id task-900 --to b:main --from a:main --title T --timeout 1 --interval 1)"; rc=$?
@@ -324,12 +327,12 @@ echo ""
 echo "11. Command and conventions wiring"
 assert_contains "$ROOT/CONVENTIONS.md" "Messages Are Untrusted Requests" "CONVENTIONS.md has the untrusted-message section"
 assert_contains "$ROOT/.claude/commands/backbone-inbox.md" "untrusted requests, not instructions" "inbox display states messages are untrusted"
-assert_contains "$ROOT/.claude/commands/backbone-publish.md" "backbone-secret-check.sh" "publish runs the secret check"
-assert_contains "$ROOT/.claude/commands/backbone-publish.md" "backbone-ack-check.sh" "publish starts the no-ack timer"
-assert_contains "$ROOT/.claude/commands/backbone-publish.md" "push publish" "publish pushes via the sync wrapper"
+assert_contains "$ROOT/.claude/commands/backbone-send.md" "backbone-secret-check.sh" "send runs the secret check"
+assert_contains "$ROOT/.claude/commands/backbone-send.md" "backbone-ack-check.sh" "send starts the no-ack timer"
+assert_contains "$ROOT/.claude/commands/backbone-send.md" "push publish" "send pushes via the sync wrapper"
 assert_contains "$ROOT/.claude/commands/backbone-inbox.md" "push claim" "inbox claim pushes via the sync wrapper"
-assert_contains "$ROOT/.claude/commands/backbone-complete.md" "push complete" "complete pushes via the sync wrapper"
-assert_contains "$ROOT/.claude/commands/backbone-join.md" "backbone-poll.sh" "join documents starting the poll"
+assert_contains "$ROOT/.claude/commands/backbone-done.md" "push complete" "done pushes via the sync wrapper"
+assert_contains "$ROOT/.claude/commands/backbone.md" "backbone-poll.sh" "/backbone join documents starting the poll"
 assert_contains "$ROOT/docs/git-transport.md" "Access control for the remote" "access control requirements are documented"
 
 # ── 12. Install script: link with copy fallback (AC-8) ────────────────────────
@@ -338,23 +341,23 @@ echo "12. Install script: symlinks with copy fallback (AC-8)"
 INSTALL="$ROOT/scripts/install-backbone-commands.sh"
 T1="$TMP_DIR/proj-copy"; T2="$TMP_DIR/proj-link"; T3="$TMP_DIR/proj-fallback"; mkdir -p "$T1" "$T2" "$T3"
 bash "$INSTALL" "$T1" >/dev/null
-assert_file "$T1/.claude/commands/backbone-publish.md" "default install copies the commands"
+assert_file "$T1/.claude/commands/backbone-send.md" "default install copies the commands"
 assert_file "$T1/.claude/scripts/backbone/backbone-sync.sh" "default install copies the helper scripts"
 if [[ -L "$T1/.claude/scripts/backbone/backbone-sync.sh" ]]; then fail "default install should copy, not link"; else pass "default install makes real copies"; fi
 assert_file "$T1/.claude/.backbone-copied" "copies are recorded in .backbone-copied"
 assert_contains "$T1/.claude/.backbone-copied" "scripts/backbone/backbone-sync.sh" "manifest lists the copied scripts"
 bash "$INSTALL" "$T2" --link >/dev/null
-if [[ -L "$T2/.claude/commands/backbone-publish.md" ]]; then pass "--link creates symlinks where the OS allows"; else fail "--link did not create a symlink"; fi
+if [[ -L "$T2/.claude/commands/backbone-send.md" ]]; then pass "--link creates symlinks where the OS allows"; else fail "--link did not create a symlink"; fi
 assert_no_file "$T2/.claude/.backbone-copied" "an all-links install leaves no copy manifest"
 BACKBONE_SYMLINKS=0 bash "$INSTALL" "$T3" --link >/dev/null; rc=$?
 assert_eq "$rc" "0" "install succeeds when symlinks are unavailable"
-if [[ -L "$T3/.claude/commands/backbone-publish.md" ]]; then fail "fallback should copy, not link"; else pass "fallback copies each file"; fi
-assert_file "$T3/.claude/commands/backbone-publish.md" "fallback leaves a working command file"
-assert_contains "$T3/.claude/.backbone-copied" "commands/backbone-publish.md" "fallback records copied files for /backbone-update"
-if cmp -s "$ROOT/.claude/commands/backbone-publish.md" "$T3/.claude/commands/backbone-publish.md"; then pass "copied file matches the source"; else fail "copied file differs from source"; fi
-echo "stale" >> "$T3/.claude/commands/backbone-publish.md"
+if [[ -L "$T3/.claude/commands/backbone-send.md" ]]; then fail "fallback should copy, not link"; else pass "fallback copies each file"; fi
+assert_file "$T3/.claude/commands/backbone-send.md" "fallback leaves a working command file"
+assert_contains "$T3/.claude/.backbone-copied" "commands/backbone-send.md" "fallback records copied files for /backbone-update"
+if cmp -s "$ROOT/.claude/commands/backbone-send.md" "$T3/.claude/commands/backbone-send.md"; then pass "copied file matches the source"; else fail "copied file differs from source"; fi
+echo "stale" >> "$T3/.claude/commands/backbone-send.md"
 BACKBONE_SYMLINKS=0 bash "$INSTALL" "$T3" --link >/dev/null
-if cmp -s "$ROOT/.claude/commands/backbone-publish.md" "$T3/.claude/commands/backbone-publish.md"; then pass "re-running the installer refreshes a stale copy"; else fail "stale copy was not refreshed"; fi
+if cmp -s "$ROOT/.claude/commands/backbone-send.md" "$T3/.claude/commands/backbone-send.md"; then pass "re-running the installer refreshes a stale copy"; else fail "stale copy was not refreshed"; fi
 
 # ── 13. Notifier contract (v6 Phase 1) ─────────────────────────────────────────
 echo ""
@@ -431,6 +434,270 @@ assert_eq "$(bb_notify_confirm "$CD" a:main)" "auto" "whitespace, CR and comment
 mkdir -p "$CD/proj"; printf 'notify_confirm.proj=auto\n' > "$CD/proj/backbone.config"
 : > "$CD/backbone.config"
 assert_eq "$(bb_notify_confirm "$CD" proj:main)" "ask" "config inside a project directory is ignored"
+
+# ── 15. Ping delivery: ask vs auto, overrides, failure, logging (v6 Phase 1) ──
+echo ""
+echo "15. Ping delivery"
+new_world
+cat > "$A/roster.md" <<'EOF'
+| agent | human | notify |
+| ----- | ----- | ------ |
+| b:* | Nate | spaces/NATE |
+EOF
+cat > "$TMP_DIR/rec.sh" <<'EOS'
+#!/usr/bin/env bash
+out="$(dirname "$0")/rec"; mkdir -p "$out"
+printf '%s' "$BACKBONE_NOTIFY_TARGET" > "$out/target"
+printf '%s' "$BACKBONE_NOTIFY_TEXT" > "$out/text"
+printf '%s' "$BACKBONE_NOTIFY_TITLE" > "$out/title"
+echo ran >> "$out/runs"
+EOS
+HOSTILE=$'Q "x" $(touch '"$TMP_DIR"'/pwned3) `touch '"$TMP_DIR"'/pwned4`\nline two'
+BODY_MARK="SECRET-BODY-TEXT"
+make_msg "$A" task 950 "b:main"; echo "$BODY_MARK" >> "$A/messages/task-950-pending.md"; "$SYNC" --dir "$A" push publish task-950 >/dev/null
+ack15() { "$ACK" --dir "$A" --id task-950 --to b:main --from "${FROM15:-a:main}" --title "${TITLE15:-plain}" --timeout 1 --interval 1; }
+LOG="$A/.claude/data/backbone/pings.log"
+
+# no notifier: nothing attempted, in both modes
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "14" "no notify_command exits 14"
+assert_contains <(echo "$out") "NONOTIFIER" "...and says no notifier is configured"
+assert_no_file "$LOG" "...and nothing is logged (nothing was attempted)"
+printf 'transport=git\nnotify_confirm=auto\n' > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "14" "auto without a notifier still exits 14 and sends nothing"
+
+# ask (the default): PING printed, notifier NOT run
+rm -rf "$TMP_DIR/rec"
+printf 'transport=git\nnotify_command=bash %s\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "10" "ask mode (default) exits 10 with a PING"
+assert_eq "$out" 'PING Nate|spaces/NATE :: a:main sent you "plain" on the backbone (task-950)' "PING shows the exact target and text"
+assert_no_file "$TMP_DIR/rec/runs" "ask mode does not run the notifier"
+
+# auto via the machine default: notifier runs once with env vars
+printf 'transport=git\nnotify_command=bash %s\nnotify_confirm=auto\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+TITLE15="$HOSTILE" out="$(ack15)"; rc=$?
+assert_eq "$rc" "12" "auto mode exits 12 when sent"
+assert_eq "$out" "SENT Nate|spaces/NATE :: task-950" "SENT line names the target and id only"
+assert_eq "$(wc -l < "$TMP_DIR/rec/runs" | tr -d ' ')" "1" "notifier ran exactly once"
+assert_eq "$(cat "$TMP_DIR/rec/target")" "spaces/NATE" "target from the roster reaches the notifier"
+assert_eq "$(cat "$TMP_DIR/rec/title")" "$HOSTILE" "hostile title arrives unchanged through the ack check"
+assert_no_file "$TMP_DIR/pwned3" "\$(...) in a title is not executed"
+assert_no_file "$TMP_DIR/pwned4" "backticks in a title are not executed"
+
+# per-project override beats the machine default, in both directions
+rm -rf "$TMP_DIR/rec"
+printf 'transport=git\nnotify_command=bash %s\nnotify_confirm=auto\nnotify_confirm.a=ask\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "10" "project override ask beats machine default auto"
+assert_no_file "$TMP_DIR/rec/runs" "...and the notifier did not run"
+printf 'transport=git\nnotify_command=bash %s\nnotify_confirm.a=auto\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "12" "project override auto beats the ask default"
+FROM15="other:main" out="$(ack15)"; rc=$?
+assert_eq "$rc" "10" "another project keeps the ask default"
+printf 'transport=git\nnotify_command=bash %s\nnotify_confirm=sometimes\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "4" "an invalid notify_confirm is an error, not a silent default"
+
+# notifier failure in auto is reported, not hidden
+printf 'transport=git\nnotify_command=false\nnotify_confirm=auto\n' > "$A/backbone.config"
+out="$(ack15)"; rc=$?
+assert_eq "$rc" "13" "failing notifier in auto exits 13"
+assert_contains <(echo "$out") "NOTIFYFAILED" "...and prints NOTIFYFAILED"
+
+# the log has target, id and result, and never the title, text or body
+assert_file "$LOG" "ping attempts are logged"
+assert_contains "$LOG" "sent	spaces/NATE	task-950" "sent attempt logged with target and id"
+assert_contains "$LOG" "failed	spaces/NATE	task-950" "failed attempt logged"
+if grep -qE "plain|Q \"x\"|$BODY_MARK|sent you" "$LOG"; then fail "log must not hold title, text or body"; else pass "log holds no title, text or body"; fi
+printf 'transport=git\nnotify_command=bash %s\nnotify_confirm=auto\n' "$TMP_DIR/rec.sh" > "$A/backbone.config"
+all="$(ack15 2>&1; bash "$NOTIFY" --dir "$A" --target T --from a:main --title t --id task-950 2>&1)"
+if grep -q "$BODY_MARK" <<<"$all"; then fail "message body leaked into output"; else pass "message body appears in no script output"; fi
+if git -C "$A" check-ignore -q "$LOG"; then pass "ping log is git-ignored"; else (cd "$ROOT" && git check-ignore -q .claude/data/backbone/pings.log) && pass "ping log is git-ignored" || fail "ping log is not git-ignored"; fi
+
+# ── 16. Session hooks: register, re-join, end (v6 Phase 3, AC-8) ───────────────
+echo ""
+echo "16. Session hooks"
+new_world
+SSTART="$ROOT/scripts/backbone-session-start.sh"
+SEND="$ROOT/scripts/backbone-session-end.sh"
+PROJ="$TMP_DIR/proj/myrepo"; mkdir -p "$PROJ"; git init -q "$PROJ"; git -C "$PROJ" config user.name "Bob Seaton"
+npres() { ls "$1/presence" | grep -c '^presence-.*\.md$'; }
+
+# first join: inferred address, unique session name, count first, watcher instruction, no colon in filenames
+out="$(cd "$TMP_DIR" && "$SSTART" --dir "$B" --project "$PROJ" --key k1 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "first join exits 0"
+assert_match "$(head -1 <<<"$out")" '^backbone: 0 pending message\(s\) for myrepo:bob-seaton~[a-z0-9]{4}$' "count is the first line; name is <repo>:<git user>~<suffix>"
+S1="$(sed -n 's/^backbone: 0 pending message(s) for //p' <<<"$out")"
+assert_match "$out" 'name inferred' "an inferred name is reported as inferred"
+assert_match "$out" "start the watcher now with the Monitor tool: bash .*backbone-poll.sh.* --agent \"$S1\"" "the agent is told how to start the watcher"
+assert_match "$out" "others can address you as myrepo:bob-seaton" "the stable address is shown"
+PF1="$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" path "$S1")"
+assert_file "$PF1" "presence record written without any command"
+assert_contains "$PF1" "^agent_name: $S1$" "agent_name holds the real session name"
+assert_contains "$PF1" "^status: active" "...and status is active"
+if ls "$B/presence" | grep -q ':'; then fail "a presence filename contains a colon"; else pass "no colon in any presence filename"; fi
+assert_eq "$(cat "$B/.claude/data/backbone/sessions/k1")" "$S1" "the session name is remembered for the end hook"
+
+# idempotent re-join: same session key, same record, prose survives
+joined1="$(sed -n 's/^joined: //p' "$PF1")"
+printf '\nMy own note.\n' >> "$PF1"
+sleep 1
+out="$("$SSTART" --dir "$B" --project "$PROJ" --key k1 </dev/null)"
+assert_eq "$(sed -n 's/^backbone: 0 pending message(s) for //p' <<<"$out")" "$S1" "re-join keeps the same session name"
+assert_eq "$(npres "$B")" "1" "re-join creates no second record"
+assert_eq "$(sed -n 's/^joined: //p' "$PF1")" "$joined1" "re-join keeps the original joined time"
+assert_contains "$PF1" "My own note." "re-join keeps prose written during the session"
+assert_match "$out" "refreshed $S1" "re-join says it refreshed"
+
+# a second Claude session for the same person is a second record under the same address
+out="$("$SSTART" --dir "$B" --project "$PROJ" --key k2 </dev/null)"
+S2="$(sed -n 's/^backbone: 0 pending message(s) for //p' <<<"$out")"
+if [[ "$S2" != "$S1" && "$(bb_address "$S2")" == "myrepo:bob-seaton" ]]; then pass "a second session gets its own name under the same address"; else fail "second session name '$S2' vs '$S1'"; fi
+assert_eq "$(npres "$B")" "2" "...and its own record"
+assert_eq "$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" files myrepo:bob-seaton | wc -l | tr -d ' ')" "2" "the address resolves to both sessions"
+
+# a message to the address reaches both sessions; one to a session reaches only it
+make_msg "$A" task 1600 "myrepo:bob-seaton"; make_msg "$A" task 1601 "$S2"; "$SYNC" --dir "$A" push publish task-1600 >/dev/null
+out1="$("$SSTART" --dir "$B" --project "$PROJ" --key k1 </dev/null | head -1)"
+out2="$("$SSTART" --dir "$B" --project "$PROJ" --key k2 </dev/null | head -1)"
+assert_match "$out1" 'backbone: 1 pending' "address message reaches session 1 (and not session 2's own)"
+assert_match "$out2" 'backbone: 2 pending' "session 2 gets the address message and its own"
+# a stdin session_id is used as the key
+out="$(printf '{"hook_event_name":"SessionStart","session_id":"abc-123"}' | "$SSTART" --dir "$B" --project "$PROJ")"
+assert_file "$B/.claude/data/backbone/sessions/abc-123" "the session_id from the hook's stdin keys the session"
+
+# explicit address is honored and not called inferred
+out="$("$SSTART" --dir "$B" --agent "radeas:nate" --project "$PROJ" --key k4 </dev/null)"
+if grep -q 'name inferred' <<<"$out"; then fail "explicit address reported as inferred"; else pass "an explicit address is not reported as inferred"; fi
+assert_match "$(head -1 <<<"$out")" 'for radeas:nate~' "...and is used as the address"
+
+# end: marks inactive, pushes, forgets the session
+"$SYNC" --dir "$B" push session-start x >/dev/null 2>&1
+out="$("$SEND" --dir "$B" --key k1 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "session end exits 0"
+assert_contains "$PF1" "^status: inactive" "session end marks presence inactive"
+assert_contains "$PF1" "My own note." "...without touching the prose"
+assert_no_file "$B/.claude/data/backbone/sessions/k1" "...and forgets the session"
+"$SYNC" --dir "$A" pull
+assert_contains "$A/presence/$(basename "$PF1")" "^status: inactive" "the inactive record was pushed to the remote"
+assert_contains "$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" path "$S2")" "^status: active" "the other session stays active"
+out="$("$SEND" --dir "$B" --key k1 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "ending twice exits 0"
+assert_match "$out" "nothing to deregister" "...and says there is nothing to do"
+
+# hooks never block the session, whatever fails
+out="$("$SSTART" --dir "$TMP_DIR/does-not-exist" --key z </dev/null)"; rc=$?
+assert_eq "$rc" "0" "start with a missing backbone dir exits 0"
+out="$("$SEND" --dir "$TMP_DIR/does-not-exist" --key z </dev/null)"; rc=$?
+assert_eq "$rc" "0" "end with a missing backbone dir exits 0"
+out="$(printf 'not json at all \x00\xff' | "$SSTART" --dir "$B" --project "$PROJ")"; rc=$?
+assert_eq "$rc" "0" "start with garbage on stdin exits 0"
+assert_match "$(head -1 <<<"$out")" '^backbone: [0-9]+ pending' "...and the count is still the first line"
+chmod 555 "$B/presence"
+out="$("$SSTART" --dir "$B" --project "$PROJ" --key unwritable </dev/null)"; rc=$?
+chmod 755 "$B/presence"
+assert_eq "$rc" "0" "start with an unwritable presence dir exits 0"
+assert_match "$(head -1 <<<"$out")" '^backbone: [0-9]+ pending' "...and the count is still the first line"
+assert_match "$out" 'could not write' "...and says what failed"
+git -C "$B" remote set-url origin "$TMP_DIR/no-such-remote.git"
+out="$("$SSTART" --dir "$B" --project "$PROJ" --key k5 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "start with an unreachable remote exits 0"
+assert_match "$(head -1 <<<"$out")" '^backbone: [0-9]+ pending' "...and the count is still the first line"
+assert_match "$out" 'unreachable' "...and the outage is reported after it"
+out="$("$SEND" --dir "$B" --key k5 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "end with an unreachable remote exits 0"
+assert_contains "$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" path "$(sed -n 's/^backbone: [0-9]* pending message(s) for //p' <<<"$("$SSTART" --dir "$B" --project "$PROJ" --key k5 </dev/null)")")" "^status:" "the local record is still there after an outage"
+
+# no explicit address and no git user: refuse, say why, exit 0
+NOUSER="$TMP_DIR/nouser"; mkdir -p "$NOUSER"; git init -q "$NOUSER"
+before="$(npres "$B")"
+out="$(BACKBONE_AGENT= "$SSTART" --dir "$B" --project "$NOUSER" --key k6 </dev/null)"; rc=$?
+assert_eq "$rc" "0" "refusing to register still exits 0"
+assert_match "$out" 'none could be inferred' "...and explains how to fix it"
+assert_eq "$(npres "$B")" "$before" "...and registers nothing"
+
+# ── 17. Installing the hooks (v6 Phase 3) ───────────────────────────────────────
+echo ""
+echo "17. Hook installer"
+IH="$ROOT/scripts/backbone-install-hooks.sh"
+P1="$TMP_DIR/hk1"; mkdir -p "$P1"
+rc=0; bash "$IH" "$P1" </dev/null >/dev/null 2>&1 || rc=$?
+assert_eq "$rc" "5" "no consent and no terminal: exits 5"
+assert_no_file "$P1/.claude/settings.json" "...and writes nothing"
+bash "$IH" "$P1" --dry-run </dev/null >/dev/null; rc=$?
+assert_eq "$rc" "0" "dry run exits 0"
+assert_no_file "$P1/.claude/settings.json" "...and writes nothing"
+bash "$IH" "$P1" --yes </dev/null >/dev/null; rc=$?
+assert_eq "$rc" "0" "install with --yes exits 0"
+assert_eq "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$P1/.claude/settings.json")" "bash .claude/scripts/backbone/backbone-session-start.sh --dir ../agent-backbone" "SessionStart hook installed"
+assert_eq "$(jq -r '.hooks.SessionEnd[0].hooks[0].command' "$P1/.claude/settings.json")" "bash .claude/scripts/backbone/backbone-session-end.sh --dir ../agent-backbone" "SessionEnd hook installed"
+cp "$P1/.claude/settings.json" "$TMP_DIR/hk1.before"
+out="$(bash "$IH" "$P1" --yes </dev/null)"
+assert_match "$out" 'already installed' "a second install says it is already installed"
+assert_eq "$(jq -S . "$P1/.claude/settings.json")" "$(jq -S . "$TMP_DIR/hk1.before")" "...and changes nothing"
+
+# merges into existing settings without losing anything
+P2="$TMP_DIR/hk2"; mkdir -p "$P2/.claude"
+cat > "$P2/.claude/settings.json" <<'EOF'
+{"permissions":{"allow":["Bash(ls:*)"]},"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo mine"}]}],"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo guard"}]}]}}
+EOF
+bash "$IH" "$P2" --yes </dev/null >/dev/null
+assert_eq "$(jq -r '.permissions.allow[0]' "$P2/.claude/settings.json")" "Bash(ls:*)" "existing permissions are kept"
+assert_eq "$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$P2/.claude/settings.json")" "echo guard" "an unrelated existing hook is kept"
+assert_eq "$(jq -r '.hooks.SessionStart | length' "$P2/.claude/settings.json")" "2" "the existing SessionStart hook is kept alongside the backbone one"
+assert_eq "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$P2/.claude/settings.json")" "echo mine" "...and still runs first"
+assert_file "$P2/.claude/settings.json.bak-backbone" "the previous settings were backed up"
+assert_eq "$(jq -r '.hooks.SessionStart | length' "$P2/.claude/settings.json.bak-backbone")" "1" "...and the backup is the original"
+
+# invalid JSON is never touched
+P3="$TMP_DIR/hk3"; mkdir -p "$P3/.claude"; echo '{ not json' > "$P3/.claude/settings.json"
+rc=0; bash "$IH" "$P3" --yes </dev/null >/dev/null 2>&1 || rc=$?
+assert_eq "$rc" "4" "invalid settings exit 4"
+assert_eq "$(cat "$P3/.claude/settings.json")" "{ not json" "...and are left untouched"
+
+# ── 18. Address, "me", and installing hooks (v6 Phase 4) ────────────────────────
+echo ""
+echo "18. Name, me, install --hooks"
+NM="$ROOT/scripts/backbone-name.sh"
+ND2="$TMP_DIR/nm"; mkdir -p "$ND2"; printf '# keep me\ntransport=git\nagent=old\nnotify_command=true\n' > "$ND2/backbone.config"
+assert_match "$(BACKBONE_AGENT= bash "$NM" --dir "$ND2" show)" 'address: old \(from agent=' "show reads agent= from the config"
+bash "$NM" --dir "$ND2" set bob >/dev/null
+assert_eq "$(bb_config_get "$ND2" agent)" "bob" "set replaces agent="
+assert_eq "$(grep -c '^agent=' "$ND2/backbone.config")" "1" "...leaving exactly one agent= line"
+assert_contains "$ND2/backbone.config" "^# keep me" "...and keeps comments"
+assert_contains "$ND2/backbone.config" "^notify_command=true" "...and keeps other keys"
+rc=0; bash "$NM" --dir "$ND2" set 'bad name;rm -rf' >/dev/null 2>&1 || rc=$?
+assert_eq "$rc" "4" "an address with shell characters is rejected"
+rc=0; bash "$NM" --dir "$ND2" set 'bob~ab12' >/dev/null 2>&1 || rc=$?
+assert_eq "$rc" "4" "an address with a session suffix is rejected"
+assert_eq "$(bb_config_get "$ND2" agent)" "bob" "...and the old value is untouched"
+assert_match "$(BACKBONE_AGENT=envname bash "$NM" --dir "$ND2" show)" 'envname \(from BACKBONE_AGENT' "BACKBONE_AGENT wins over the config"
+bash "$NM" --dir "$ND2" unset >/dev/null
+assert_eq "$(bb_config_get "$ND2" agent)" "" "unset removes agent="
+assert_contains "$ND2/backbone.config" "^transport=git" "...and keeps the rest"
+
+new_world
+PROJ2="$TMP_DIR/proj2/other"; mkdir -p "$PROJ2"; git init -q "$PROJ2"; git -C "$PROJ2" config user.name "Nate X"
+rc=0; bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" me "$PROJ2" >/dev/null || rc=$?
+assert_eq "$rc" "1" "me finds nothing before a session registers"
+out="$("$SSTART" --dir "$B" --project "$PROJ2" --key m1 </dev/null)"
+S="$(sed -n 's/^backbone: 0 pending message(s) for //p' <<<"$out")"
+assert_eq "$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" me "$PROJ2")" "$S" "me returns the session registered from that project"
+assert_eq "$(CLAUDE_PROJECT_DIR="$PROJ2" bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" me)" "$S" "...also via CLAUDE_PROJECT_DIR"
+CLAUDE_PROJECT_DIR="$PROJ2" "$SEND" --dir "$B" --key m1 </dev/null >/dev/null
+rc=0; bash "$ROOT/scripts/backbone-presence.sh" --dir "$B" me "$PROJ2" >/dev/null || rc=$?
+assert_eq "$rc" "1" "me finds nothing again after the session ends"
+
+INST="$ROOT/scripts/install-backbone-commands.sh"
+H1="$TMP_DIR/inst-hooks"; mkdir -p "$H1"
+bash "$INST" "$H1" --hooks </dev/null >"$TMP_DIR/inst.out" 2>&1; rc=$?
+assert_eq "$rc" "0" "install --hooks without a terminal still installs the commands (exit 0)"
+assert_no_file "$H1/.claude/settings.json" "...and adds no hooks without consent"
+assert_contains "$TMP_DIR/inst.out" "consent required" "...and says consent is required"
+assert_file "$H1/.claude/commands/backbone.md" "...and ships /backbone"
 
 # ── SECTIONS-INSERT-BEFORE-SUMMARY ────────────────────────────────────────────
 

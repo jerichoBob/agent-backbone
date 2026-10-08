@@ -5,13 +5,14 @@
 # committed like any other file on the shared branch (the sync wrapper does not stage it).
 # One table row per human; the agent column may use shell globs so one row covers a whole repo:
 #
-#   | agent        | human | gchat              |
+#   | agent        | human | notify             |
 #   | ------------ | ----- | ------------------ |
 #   | stak-app:*   | Bob   | bob@example.com    |
 #   | radeas-*:*   | Nate  | nate@example.com   |
 #
 # Usage: backbone-roster-lookup.sh [--dir DIR] <agent-name>
-# Prints "<human>|<gchat>" for the first matching row. Exit 0 found · 1 no match · 4 usage.
+# The notify column is an opaque target handed to the configured notifier (for Radeas, a Chat space ID).
+# Prints "<human>|<notify>" for the first matching row. Exit 0 found · 1 no match · 4 usage.
 set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -26,12 +27,12 @@ AGENT="${1:-}"
 ROSTER="$DIR/roster.md"
 [[ -f "$ROSTER" ]] || exit 1
 
-while IFS='|' read -r _ pattern human gchat _; do
+while IFS='|' read -r _ pattern human notify _; do
   pattern="$(echo "$pattern" | sed -E 's/^[[:space:]`]+|[[:space:]`]+$//g')"
   human="$(echo "$human" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-  gchat="$(echo "$gchat" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  notify="$(echo "$notify" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
   [[ -n "$pattern" && "$pattern" != "agent" && "$pattern" != -* ]] || continue
   # shellcheck disable=SC2254
-  case "$AGENT" in $pattern) echo "$human|$gchat"; exit 0 ;; esac
+  case "$AGENT" in $pattern) echo "$human|$notify"; exit 0 ;; esac
 done < "$ROSTER"
 exit 1

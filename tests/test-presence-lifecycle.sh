@@ -4,7 +4,9 @@
 
 set -euo pipefail
 
-PRESENCE_DIR="$(cd "$(dirname "$0")/.." && pwd)/presence"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PRESENCE_DIR="$ROOT/presence"
+source "$ROOT/scripts/backbone-lib.sh"
 TMP_DIR="$(mktemp -d)"
 PASS=0
 FAIL=0
@@ -93,7 +95,7 @@ echo ""
 echo "5. Presence lifecycle"
 
 AGENT_NAME="test-repo:test-task"
-PRESENCE_FILE="$TMP_DIR/presence-${AGENT_NAME}.md"
+PRESENCE_FILE="$TMP_DIR/presence-$(bb_safe_name "$AGENT_NAME").md"
 
 # Simulate /backbone-join
 cat > "$PRESENCE_FILE" <<'EOF'
@@ -155,7 +157,7 @@ echo ""
 echo "6. TTL staleness"
 
 # Build a presence file with a known join time and compute staleness
-STALE_FILE="$TMP_DIR/presence-stale-agent:old-task.md"
+STALE_FILE="$TMP_DIR/presence-$(bb_safe_name "stale-agent:old-task").md"
 cat > "$STALE_FILE" <<'EOF'
 ---
 agent_name: stale-agent:old-task
@@ -201,18 +203,100 @@ assert_file_exists "$COMMANDS_DIR/backbone-roster.md" "/backbone-roster exists"
 # ── Test 8: filename convention ───────────────────────────────────────────────
 echo ""
 echo "8. Filename convention"
-VALID_FILENAMES=(
-  "presence-grostak-api:patient-schema.md"
-  "presence-stak-app:refill-flow.md"
-  "presence-agent-backbone:cr-workflow.md"
-)
-for fname in "${VALID_FILENAMES[@]}"; do
-  if echo "$fname" | grep -qE '^presence-[a-z0-9-]+:[a-z0-9-]+\.md$'; then
-    pass "valid filename: $fname"
+for agent in "grostak-api:patient-schema" "stak-app:refill-flow" "agent-backbone:cr-workflow" "stak-app:bob~ab12"; do
+  fname="presence-$(bb_safe_name "$agent").md"
+  if echo "$fname" | grep -qE '^presence-[a-z0-9-]+__[a-z0-9~-]+\.md$'; then
+    pass "safe filename for $agent: $fname"
   else
-    fail "invalid filename: $fname"
+    fail "unsafe or malformed filename for $agent: $fname"
   fi
 done
+
+# ── Test 9: Windows-safe names (v6 AC-6) ─────────────────────────────────────
+echo ""
+echo "9. Safe filenames"
+assert_eq() { if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (expected '$2', got '$1')"; fi; }
+assert_eq "$(bb_safe_name 'stak-app:main')" "stak-app__main" "colon becomes a double underscore"
+assert_eq "$(bb_safe_name 'stak-app:bob~ab12')" "stak-app__bob~ab12" "tilde is kept (session suffix)"
+nasty='a:b/c\d*e?f"g<h>i|j'
+safe="$(bb_safe_name "$nasty")"
+if [[ "$safe" =~ [:/\\*?\"\<\>\|] ]]; then fail "safe name still holds a character Windows rejects: $safe"; else pass "no : / \\ * ? \" < > | survives ($safe)"; fi
+assert_eq "$(bb_safe_name "$(bb_safe_name 'stak-app:main')")" "stak-app__main" "safe form is stable when applied twice"
+assert_eq "$(bash "$ROOT/scripts/backbone-presence.sh" --dir "$ROOT" safe 'x:y')" "x__y" "backbone-presence.sh safe agrees with the library"
+
+# ── Test 10: lookups scan agent_name, not the filename ───────────────────────
+echo ""
+echo "10. Lookups scan agent_name"
+LD="$TMP_DIR/lookup"; mkdir -p "$LD/presence" "$LD/messages"
+mkpres() { # <file> <agent_name> [subscription]
+  { echo "---"; echo "agent_name: $2"; echo "repo: r"; echo "status: active"
+    if [[ -n "${3:-}" ]]; then echo "subscriptions:"; echo "  - $3"; fi
+    echo "---"; echo; echo "# Current Task"; echo "x"; } > "$1"
+}
+mkpres "$LD/presence/presence-arbitrary-label.md" "x:bob~ab12" "topic-a"
+mkpres "$LD/presence/presence-other-label.md" "x:bob~f3c9" "topic-b"
+mkpres "$LD/presence/presence-third.md" "x:nate~0001" "topic-c"
+PRES="$ROOT/scripts/backbone-presence.sh"
+assert_eq "$(bash "$PRES" --dir "$LD" path 'x:bob~ab12')" "$LD/presence/presence-arbitrary-label.md" "an existing record is found by agent_name even under a different filename"
+assert_eq "$(bash "$PRES" --dir "$LD" path 'x:new~9999')" "$LD/presence/presence-x__new~9999.md" "a new name gets the safe filename"
+assert_eq "$(bash "$PRES" --dir "$LD" files 'x:bob~ab12' | wc -l | tr -d ' ')" "1" "a session name matches only its own record"
+assert_eq "$(bash "$PRES" --dir "$LD" files 'x:bob' | wc -l | tr -d ' ')" "2" "an address matches all of its sessions"
+bash "$PRES" --dir "$LD" files 'x:nobody' >/dev/null 2>&1 && fail "unknown agent should exit 1" || pass "unknown agent exits non-zero"
+assert_eq "$(bb_agent_subs "$LD" 'x:bob~ab12')" "topic-a" "a session sees only its own subscriptions"
+assert_eq "$(bb_agent_subs "$LD" 'x:bob' | sort | tr '\n' ' ')" "topic-a topic-b " "an address unions its sessions' subscriptions"
+mkmsg() { printf -- '---\nid: "%s"\ntype: task\nstatus: pending\nrouting: direct\nfrom: s:main\nto: %s\ntitle: T\n---\n' "$1" "$2" > "$LD/messages/task-$1-pending.md"; }
+mkmsg 1 'x:bob'; mkmsg 2 'x:bob~ab12'; mkmsg 3 'x:bob~f3c9'
+assert_eq "$(bb_pending_for "$LD" 'x:bob~ab12' | sort | tr '\n' ' ')" "task-1-pending.md task-2-pending.md " "a session gets its address's messages and its own, not a sibling's"
+assert_eq "$(bb_pending_for "$LD" 'x:nate~0001' | tr '\n' ' ')" "" "another person's session gets none of them"
+
+# ── Test 11: migration (v6 AC-7) ─────────────────────────────────────────────
+echo ""
+echo "11. Presence migration"
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+MIG="$ROOT/scripts/backbone-migrate-presence.sh"
+MD="$TMP_DIR/mig"; mkdir -p "$MD/presence"; git init -q -b main "$MD"
+mkpres "$MD/presence/presence-stak-app:main.md" "stak-app:main"
+mkpres "$MD/presence/presence-grostak-v2:main.md" "grostak-v2:main"
+mkpres "$MD/presence/presence-example.md" "example-repo:example-task"
+git -C "$MD" add -A && git -C "$MD" commit -q -m "old names"
+echo "touched" >> "$MD/presence/presence-stak-app:main.md"
+git -C "$MD" commit -q -am "second commit so history has two entries"
+
+before="$(ls "$MD/presence" | sort | tr '\n' ' ')"
+out="$(bash "$MIG" --dir "$MD" --dry-run)"; rc=$?
+assert_eq "$rc" "0" "dry run exits 0"
+assert_eq "$(ls "$MD/presence" | sort | tr '\n' ' ')" "$before" "dry run changes nothing"
+if grep -q "WOULD   presence-stak-app:main.md -> presence-stak-app__main.md" <<<"$out"; then pass "dry run lists the rename"; else fail "dry run did not list the rename: $out"; fi
+
+bash "$MIG" --dir "$MD" >/dev/null; rc=$?
+assert_eq "$rc" "0" "migration exits 0"
+assert_file_exists "$MD/presence/presence-stak-app__main.md" "colon file renamed to safe form"
+assert_file_exists "$MD/presence/presence-grostak-v2__main.md" "second file renamed"
+assert_file_exists "$MD/presence/presence-example.md" "an already-safe file is left alone"
+if ls "$MD/presence" | grep -q ':'; then fail "a colon filename remains"; else pass "no colon filenames remain"; fi
+assert_contains "$MD/presence/presence-stak-app__main.md" "^agent_name: stak-app:main" "agent_name inside the file is untouched"
+assert_eq "$(bash "$PRES" --dir "$MD" path 'stak-app:main')" "$MD/presence/presence-stak-app__main.md" "readers still find the record by agent_name"
+git -C "$MD" commit -q -m "migrate"
+assert_eq "$(git -C "$MD" log --follow --oneline -- presence/presence-stak-app__main.md | wc -l | tr -d ' ')" "3" "git history follows the rename (create, edit, rename)"
+
+out="$(bash "$MIG" --dir "$MD")"; rc=$?
+assert_eq "$rc" "0" "second run exits 0"
+assert_eq "$out" "nothing to migrate" "second run is a no-op"
+assert_eq "$(git -C "$MD" status --short | wc -l | tr -d ' ')" "0" "second run leaves the tree clean"
+
+# a target that already exists is never overwritten
+mkpres "$MD/presence/presence-dup:main.md" "dup:main"; mkpres "$MD/presence/presence-dup__main.md" "dup:main"
+rc=0; out="$(bash "$MIG" --dir "$MD")" || rc=$?
+assert_eq "$rc" "1" "an existing target is skipped and exits 1"
+assert_file_exists "$MD/presence/presence-dup:main.md" "...and the source is kept"
+
+# outside git, a plain rename works
+PD="$TMP_DIR/plain"; mkdir -p "$PD/presence"; mkpres "$PD/presence/presence-a:b.md" "a:b"
+bash "$MIG" --dir "$PD" >/dev/null
+assert_file_exists "$PD/presence/presence-a__b.md" "a directory outside git is migrated too"
+rc=0; bash "$MIG" --dir "$TMP_DIR/nonexistent" >/dev/null 2>&1 || rc=$?
+assert_eq "$rc" "4" "a missing directory exits 4"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
