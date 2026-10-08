@@ -4,3 +4,7 @@
 messages/*
 !messages/README.md
 !messages/types/
+
+# Per-machine transport setting (see docs/git-transport.md).
+backbone.config
+.claude/handoffs/*

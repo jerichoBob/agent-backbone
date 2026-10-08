@@ -21,7 +21,9 @@ It holds no application code. Its role is shared context, cross-project slash co
 - `.claude/context-architecture-relationship.md` — canonical explanation of how grostak-v2 and stak-app relate
 - `.claude/learnings.md` — captured lessons and correction rules (read before doing anything non-trivial)
 - `specs/` — SDD specs for this backbone itself (v1: CR workflow, v2: presence/discovery, v3: generic message bus)
-- `tests/` — lifecycle tests (backbone-workflow, presence-lifecycle, message-bus — 124/124 passing)
+- `scripts/` — install script plus the v5 git-transport helpers (`backbone-sync.sh`, `backbone-poll.sh`, `backbone-session-start.sh`, `backbone-ack-check.sh`, `backbone-secret-check.sh`, `backbone-roster-lookup.sh`)
+- `docs/git-transport.md` — how to run the backbone over git (opt-in via `transport=git` in `backbone.config`; default is local disk)
+- `tests/` — lifecycle tests (backbone-workflow 43, message-bus 47, presence-lifecycle 38, git-transport 117 — all passing)
 
 ## Architecture: grostak-v2 ↔ stak-app
 
@@ -51,7 +53,7 @@ Install commands into a project repo: `bash ../agent-backbone/scripts/install-ba
 When working on this repo:
 
 1. **Specs first** — see `specs/README.md` for the tracker. Each spec has phases and tasks.
-2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh` before marking tasks complete.
+2. **Tests after implementation** — run `bash tests/test-backbone-workflow.sh && bash tests/test-message-bus.sh && bash tests/test-presence-lifecycle.sh && bash tests/test-git-transport.sh` before marking tasks complete.
 3. **Update docs** — keep README.md and specs/README.md in sync with code changes.
 
 ## File purposes
@@ -64,10 +66,12 @@ When working on this repo:
 | `messages/archive/` | Completed messages (moved by /backbone-complete) |
 | `presence/` | Agent registry (active/stale/inactive agents) |
 | `specs/README.md` | Progress tracker for all specs (v1-v4) |
-| `tests/test-backbone-workflow.sh` | Backbone workflow test (39 assertions) |
-| `tests/test-message-bus.sh` | Generic bus test (56 assertions) |
-| `tests/test-presence-lifecycle.sh` | Presence test (27 assertions) |
-| `scripts/install-backbone-commands.sh` | Copy backbone commands into project repos |
+| `tests/test-backbone-workflow.sh` | Backbone workflow test (43 assertions) |
+| `tests/test-message-bus.sh` | Generic bus test (47 assertions) |
+| `tests/test-presence-lifecycle.sh` | Presence test (38 assertions) |
+| `tests/test-git-transport.sh` | Git transport, notification, secret check, install (117 assertions; real git, two clones) |
+| `scripts/install-backbone-commands.sh` | Copy (or `--link`) backbone commands and helper scripts into project repos |
+| `scripts/backbone-sync.sh` | The only code that touches git; honors `transport=local\|git` |
 | `.claude/commands/backbone-*.md` | Backbone slash commands (8 commands) |
 | `.claude/commands/correction.md` | Capture lessons into `.claude/learnings.md` |
 | `.claude/commands/learning.md` | Alias for correction |

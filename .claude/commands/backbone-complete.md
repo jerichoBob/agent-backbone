@@ -2,6 +2,20 @@
 
 Use this command after finishing the work described in a claimed message. It writes the completion notes, marks the message complete, and moves it to `messages/archive/` — removing it from the active scan path permanently.
 
+## Transport
+
+Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
+
+```bash
+SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
+bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
+```
+
+- `local` — nothing below changes: read and write `../agent-backbone/` directly and skip every `$SYNC` step.
+- `git` — run the `$SYNC` steps shown below. Exit codes: `2` remote unreachable (stop and tell the developer; do NOT fall back to local), `3` lost a race (see the step), `4` config error.
+
+If `git`: run `bash "$SYNC" --dir ../agent-backbone pull` first.
+
 ## Pre-flight check
 
 Find claimed messages owned by this session:
@@ -37,6 +51,8 @@ Be specific enough that the sender can act on it without follow-up questions.
 3. Move the file: `{type}-{id}-claimed.md` → `archive/{type}-{id}-complete.md`
 
 The file is now out of the active scan path. `/backbone-inbox` will never show it again.
+
+4. **git transport only:** `bash "$SYNC" --dir ../agent-backbone push complete {type}-{id}` — commits the move as `backbone: complete {type}-{id}` and pushes it.
 
 ## Step 4: Confirm
 

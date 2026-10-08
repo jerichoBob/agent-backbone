@@ -38,7 +38,7 @@ Report: `agent-backbone pulled — now at {short commit hash}`
 bash ../agent-backbone/scripts/install-backbone-commands.sh "$(pwd)"
 ```
 
-Show the install script output so the user can see which files were updated.
+Show the install script output so the user can see which files were updated. The script also refreshes `.claude/scripts/backbone/` (the git-transport helpers). On Windows or any filesystem without symlink support, files are copied rather than linked and listed in `.claude/.backbone-copied` — re-running this command is how those copies get refreshed. Pass `--link` to prefer symlinks (copy fallback is automatic).
 
 ### Step 4: Confirm
 
@@ -48,6 +48,7 @@ Backbone Update Complete
 
 agent-backbone:  pulled to {short-hash}
 Commands:        reinstalled into .claude/commands/
+Scripts:         reinstalled into .claude/scripts/backbone/
 
 Run /backbone-join to register this session with the updated backbone.
 ```

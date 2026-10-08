@@ -2,6 +2,20 @@
 
 Run this at the start of any session that will interact with the backbone (sending or receiving CRs, reading peer context). It registers your presence so other agents can find you.
 
+## Transport
+
+Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
+
+```bash
+SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
+bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
+```
+
+- `local` — skip every `$SYNC` step below.
+- `git` — run them. Exit `2` (remote unreachable) means stop and tell the developer; never fall back to local.
+
+If `git`: run `bash "$SYNC" --dir ../agent-backbone pull` first, so the roster below is current.
+
 ## Pre-flight check
 
 ```bash
@@ -111,6 +125,8 @@ If this is a fresh session with no prior context, write "None yet — session ju
 
 Infer 2-4 capabilities from the working directory and current task context. Use tags from `../agent-backbone/presence/README.md` where they fit; add new ones if needed.
 
+**git transport only:** `bash "$SYNC" --dir ../agent-backbone push join {agent_name}`. Presence is written only on join and leave in git mode — there is no heartbeat, so `updated` and `ttl_hours` do not mean the agent is still online.
+
 ## Step 4: Capability match hints
 
 After writing the presence record, scan all **active** agents for capability overlap with this session's declared capabilities.
@@ -131,6 +147,18 @@ If no matches, skip the hints section.
 Read `../agent-backbone/CONVENTIONS.md`. Display it to the developer under a "Backbone Conventions" header so they are aware of the operating rules before the session proceeds.
 
 If the file does not exist, skip silently.
+
+## Step 5b: Start the new-message watcher
+
+Start the poll with the **Monitor** tool so this session is woken when a message addressed to it arrives. It prints nothing while idle (no model tokens) and prints one line, then exits, on a new message:
+
+```bash
+bash .claude/scripts/backbone/backbone-poll.sh --dir ../agent-backbone --agent {agent_name}
+```
+
+(Fall back to `../agent-backbone/scripts/backbone-poll.sh` if the installed copy is missing.) The default check interval is 30 seconds. When it fires, run `/backbone-inbox`, and restart the watcher afterwards.
+
+In `git` mode the poll also writes the receiver's `seen` marker, which stops the sender's 5-minute no-ack ping.
 
 ## Step 6: Confirm registration
 

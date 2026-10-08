@@ -2,6 +2,18 @@
 
 Run this at the end of a session to mark yourself inactive and persist what you learned for future agents.
 
+## Transport
+
+Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
+
+```bash
+SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
+bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
+```
+
+- `local` — skip every `$SYNC` step below.
+- `git` — run them. Exit `2` (remote unreachable) means stop and tell the developer; never fall back to local.
+
 ## Pre-flight check
 
 Find this session's presence record. Read all files in `../agent-backbone/presence/` and identify the one matching this session's agent name (infer from working directory if needed).
@@ -46,6 +58,8 @@ Read the current presence file. Update:
 3. Set `updated:` to the exact shell output above
 
 Write the updated file back (same path — do not rename).
+
+**git transport only:** `bash "$SYNC" --dir ../agent-backbone push leave {agent_name}`. Stop the Monitor watcher started at join, if it is still running.
 
 ## Step 3: Confirm
 

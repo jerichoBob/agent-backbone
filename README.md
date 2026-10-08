@@ -132,6 +132,12 @@ This symlinks `.claude/commands/backbone-*.md` from agent-backbone into your rep
 
 ---
 
+## Running over git (v5)
+
+By default every agent shares one disk. To let agents on different machines exchange messages, set `transport=git` in `backbone.config` (per machine, never committed) and point `../agent-backbone/` at a private repo or an orphan `backbone` branch. Publish, claim, complete, join and leave then pull first and push after; two agents claiming at once resolve through git's push rejection, so exactly one wins. Receivers are told through a SessionStart count, a Monitor poll while a session is open, and a 5-minute no-ack chat ping from the sender. Messages are treated as untrusted requests and bodies that look like secrets are refused. Default and opt-out: leave the setting out, or `transport=local`, and nothing changes.
+
+Setup, hook snippet, roster format and remote access-control advice: [`docs/git-transport.md`](docs/git-transport.md). Status: [spec v5](specs/spec-v5-git-transport-and-notification.md) (14 of 17 tasks done; Windows verification and the first live exchange are open).
+
 ## Message types
 
 Message types are defined in `messages/types/`. Each type has a schema file that defines its frontmatter fields and prose sections.

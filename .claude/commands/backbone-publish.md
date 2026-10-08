@@ -10,6 +10,20 @@ ls ../agent-backbone/messages/types/ 2>/dev/null || echo "MISSING"
 
 If `MISSING`: stop — `../agent-backbone/` is not accessible.
 
+## Transport
+
+Backbone files can move over the local disk (default) or over git. Check which, and resolve the sync script once:
+
+```bash
+SYNC=.claude/scripts/backbone/backbone-sync.sh; [ -x "$SYNC" ] || SYNC=../agent-backbone/scripts/backbone-sync.sh
+bash "$SYNC" --dir ../agent-backbone mode      # prints: local | git
+```
+
+- `local` — nothing below changes: read and write `../agent-backbone/` directly and skip every `$SYNC` step.
+- `git` — run the `$SYNC` steps shown below. Exit codes: `2` remote unreachable (stop and tell the developer; do NOT fall back to local), `3` lost a race (see the step), `4` config error.
+
+If `git`: run `bash "$SYNC" --dir ../agent-backbone pull` now, before reading presence or types.
+
 ## Step 0: Clarify intent
 
 **MUST ask this before doing anything else, even if context seems obvious.**
@@ -89,6 +103,18 @@ Using current conversation context, draft:
 
 If context is sparse for a section, ask one focused question rather than leaving it blank.
 
+## Step 4b: Secret check
+
+Before writing anything, write the drafted body to a scratch file inside the backbone (not `/tmp`) and scan it:
+
+```bash
+bash .claude/scripts/backbone/backbone-secret-check.sh {draft-file}
+```
+
+(Fall back to `../agent-backbone/scripts/backbone-secret-check.sh`.) Exit `1` means a possible secret — connection string with credentials, bearer token, private key, API key, or long token. The script prints `line N: <what matched>`, never the matched text. **Refuse to publish.** Tell the sender which lines matched, ask them to remove the secret or reference it by name (e.g. "the Atlas URI in your .env"), and re-draft. Do not offer to bypass the check. Delete the scratch file afterwards.
+
+Applies to every transport: a secret in a local message still ends up in archives and presence logs.
+
 ## Step 5: Write the message file
 
 Generate ID: `YYYYMMDD-HHMMSS`
@@ -111,6 +137,30 @@ updated: YYYY-MM-DD
 
 {prose sections from type schema}
 ```
+
+### Step 5b: Push (git transport only)
+
+```bash
+bash "$SYNC" --dir ../agent-backbone push publish {type}-{id}
+```
+
+This commits the new file as `backbone: publish {type}-{id}` and pushes it. If it exits non-zero, report the error — the message is on disk but the recipient will not see it until a push succeeds.
+
+### Step 5c: No-ack ping (git transport, direct messages to a named agent)
+
+Skip this for `local` transport, topic routing, and `to: any` — there is no single recipient to ping.
+
+After a successful push, start the sender-side timer with the **Monitor** tool:
+
+```bash
+bash .claude/scripts/backbone-ack-check.sh --dir ../agent-backbone --id {type}-{id} --to {to} --from {from} --title "{title}"
+```
+
+(Use `.claude/scripts/backbone/backbone-ack-check.sh`; fall back to `../agent-backbone/scripts/`.) Defaults: 5-minute timeout, 15-second check interval. The script stays silent if the receiver claims the message or writes a `seen` marker in time.
+
+If it prints a `PING <human>|<gchat> :: ...` line, send the text after `::` to that person with the `/gchat` skill, as the developer's own account, with **no per-ping confirmation** (the developer accepted this by publishing). Send exactly that text — sender and title only, never the message body. If it prints `NOPING`, tell the developer there is no `roster.md` entry for the recipient (see `docs/git-transport.md`). If the `/gchat` skill is not installed, show the developer the ping text instead.
+
+Limit: the timer lives in this session. If the session closes before the 5 minutes pass, no ping is sent.
 
 ## Step 6: Confirm
 
